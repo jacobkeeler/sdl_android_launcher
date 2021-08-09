@@ -1,0 +1,166 @@
+apply plugin: 'com.android.application'
+
+// Mapping of build flavors to corresponding supported ABIs
+ext.abiMapping = [
+        'x86_64': ['x86_64'],
+        'x86': ['x86'],
+        'armeabi_v7a': ['armeabi-v7a'],
+        'arm64_v8a': ['arm64-v8a'],
+        'universal_build': ['x86_64', 'x86', 'armeabi-v7a', 'arm64-v8a']
+]
+
+android {
+    compileSdkVersion 30
+    buildToolsVersion "30.0.1"
+
+    defaultConfig {
+        applicationId "org.luxoft.sdl_core"
+        minSdkVersion 24
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                arguments "-DBUILD_USB_SUPPORT=OFF",
+                        "-DBUILD_BT_SUPPORT=OFF",
+                        "-DENABLE_SECURITY=ON",
+                        "-DENABLE_LOG=ON",
+                        "-DBUILD_WEBSOCKET_SERVER_SUPPORT=ON"
+                cppFlags
+                targets "smartDeviceLinkCore"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.10.2"
+        }
+    }
+
+    flavorDimensions "version"
+    productFlavors {
+        x86_64 {
+            ndk {
+                abiFilter "x86_64"
+            }
+        }
+        x86 {
+            ndk {
+                abiFilter "x86"
+            }
+        }
+        armeabi_v7a {
+            ndk {
+                abiFilter "armeabi-v7a"
+            }
+        }
+        arm64_v8a {
+            ndk {
+                abiFilter "arm64-v8a"
+            }
+        }
+        universal_build {
+            ndk {
+                abiFilters "x86_64", "x86", "arm64-v8a", "armeabi-v7a"
+            }
+        }
+    }
+
+    ndkVersion '21.0.6113669'
+
+    task _buildFullSdlApk { task ->
+        doLast {
+            Properties properties = new Properties()
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+            def ndkDir = System.getenv("ORG_GRADLE_NDK_DIR");
+            println "NDK Folder from env: ${ndkDir}"
+
+            if (ndkDir == null) {
+                ndkDir = properties.getProperty('ndk.dir')
+                println "NDK Folder from local properties: ${ndkDir}"
+            }
+
+            def cpp_lib_file = "${ndkDir}/sources/cxx-stl/llvm-libc++/libs/%ARCH%/libc++_shared.so"
+            println "Shared lib file: ${cpp_lib_file}"
+
+            def third_party_libs = System.getenv("THIRD_PARTY_INSTALL_PREFIX")
+            println "Third party libs from env: ${third_party_libs}"
+
+            if (third_party_libs == null) {
+                third_party_libs = properties.getProperty('third.party.dir')
+                println "Third party libs from local properties: ${third_party_libs}"
+            }
+
+            def app_main_folder_src =  "${project.getProjectDir()}/.cxx/cmake/%FLAVOR%Debug/%ARCH%/src/appMain"
+            println "AppMain src build folder: {$app_main_folder_src}"
+
+            def obj_build_folder =  "${project.getBuildDir()}/intermediates/cmake/%FLAVOR%Debug/obj/%ARCH%"
+
+            project.ext.abiMapping.each {
+                def flavor = it.key
+                println "Prepare libraries for flavor ${flavor}"
+
+                def supported_archs = it.value
+                supported_archs.each {
+                    def arch = it
+                    println "Processing flavor architecture ${arch}"
+
+                    def sdl_so_folder = obj_build_folder.replace("%ARCH%", arch).replace("%FLAVOR%", flavor)
+                    println "Output libs: ${sdl_so_folder}"
+
+                    def target_cpp_lib_file = cpp_lib_file.replace("%ARCH%", arch)
+
+                    println "Copying C++ library from ${target_cpp_lib_file}"
+                    copy {
+                        from "${target_cpp_lib_file}"
+                        into "${sdl_so_folder}"
+                    }
+
+                    def third_party_arch = "${third_party_libs}/${arch}/lib"
+                    println "Copying 3rd party libs..."
+                    copy {
+                        from "${third_party_arch}"
+                        into "${sdl_so_folder}"
+                    }
+
+                    def app_main_folder_src_arch = app_main_folder_src.replace("%ARCH%", arch).replace("%FLAVOR%", flavor)
+                    def app_main_assets_folder = "${project.getProjectDir()}/src/${flavor}/assets/${arch}"
+                    println "Copying assets from ${app_main_folder_src_arch} into ${app_main_assets_folder}"
+                    copy {
+                        from app_main_folder_src_arch
+                        exclude "**/CMakeFiles/**"
+                        exclude "*.cmake"
+                        exclude "*.txt"
+                        exclude "*.sh"
+                        into "${app_main_assets_folder}"
+                    }
+                }
+            }
+
+            println "Done!"
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+
+}
