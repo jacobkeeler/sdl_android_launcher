@@ -1,0 +1,4 @@
+[submodule "app/src/main/cpp"]
+	path = app/src/main/cpp
+	url = https://github.com/CustomSDL/sdl_core.git
+	branch = feature/android_sdl_port_poc
