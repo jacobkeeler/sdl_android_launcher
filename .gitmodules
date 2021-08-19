@@ -2,3 +2,7 @@
 	path = app/src/main/cpp
 	url = https://github.com/CustomSDL/sdl_core.git
 	branch = feature/android_sdl_port_poc
+
+[submodule "blessed_android"]
+	path = blessed_android
+	url = https://github.com/CustomSDL/blessed-android
