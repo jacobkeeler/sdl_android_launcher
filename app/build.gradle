@@ -28,7 +28,8 @@ android {
                         "-DENABLE_SECURITY=ON",
                         "-DENABLE_LOG=ON",
                         "-DBUILD_WEBSOCKET_SERVER_SUPPORT=ON"
-                cppFlags
+                        "-BBUILD_BLE_SUPPORT=ON"
+                cppFlags "-std=c++11"
                 targets "smartDeviceLinkCore"
             }
         }
@@ -159,6 +160,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation 'androidx.documentfile:documentfile:1.0.1'
+    implementation project(path: ':blessed')
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
