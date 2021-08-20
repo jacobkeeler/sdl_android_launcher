@@ -2,17 +2,16 @@ package org.luxoft.sdl_core;
 
 import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
-import android.database.Cursor;
 import android.net.Uri;
-import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -37,21 +36,18 @@ import android.bluetooth.BluetoothAdapter;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
 
+import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
+import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 public class MainActivity extends AppCompatActivity {
 
     static final String TAG = MainActivity.class.getSimpleName();
 
-    private Thread sdl_thread_ = null;
-    private boolean is_first_load_ = true;
     private Button start_sdl_button;
     private Button stop_sdl_button;
     public static String sdl_cache_folder_path;
     public static String sdl_external_dir_folder_path;
     private static final int ACCESS_LOCATION_REQUEST = 1;
     private static final int ACCESS_EXT_STORAGE_REQUEST = 2;
-
-    private native static void StartSDL();
-    private native static void StopSDL();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,10 +63,10 @@ public class MainActivity extends AppCompatActivity {
         start_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (startSDL()) {
-                    start_sdl_button.setEnabled(false);
-                    stop_sdl_button.setEnabled(true);
-                }
+                start_sdl_button.setEnabled(false);
+                stop_sdl_button.setEnabled(false);
+                startService(
+                        new Intent(MainActivity.this, SdlLauncherService.class));
                 if (isBleSupported() && isBluetoothPermissionGranted()) {
                     final Intent intent = new Intent(ACTION_START_BLE);
                     sendBroadcast(intent);
@@ -81,7 +77,8 @@ public class MainActivity extends AppCompatActivity {
         stop_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                StopSDL();
+                stopService(
+                        new Intent(MainActivity.this, SdlLauncherService.class));
                 if (isBleSupported() && isBluetoothPermissionGranted()) {
                     final Intent intent = new Intent(ACTION_STOP_BLE);
                     sendBroadcast(intent);
@@ -109,6 +106,8 @@ public class MainActivity extends AppCompatActivity {
         if (isBleSupported() && isBluetoothPermissionGranted()) {
             startService(new Intent(MainActivity.this, BleCentralService.class));
         }
+
+        registerReceiver(mainActivityReceiver, makeMainActivityIntentFilter());
     }
 
     @Override
@@ -372,56 +371,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void onSdlStopped() {
-        start_sdl_button.setEnabled(true);
-        stop_sdl_button.setEnabled(false);
-        showToastMessage("SDL has been stopped");
-    }
-
-    private boolean startSDL() {
-        if (is_first_load_) {
-            try {
-                System.loadLibrary("c++_shared");
-                System.loadLibrary("emhashmap");
-                System.loadLibrary("bson");
-                System.loadLibrary("boost_system");
-                System.loadLibrary("boost_regex");
-                System.loadLibrary("boost_thread");
-                System.loadLibrary("boost_date_time");
-                System.loadLibrary("boost_filesystem");
-                System.loadLibrary("smartDeviceLinkCore");
-                showToastMessage("SDL libraries has been successfully loaded");
-                is_first_load_ = false;
-            } catch (UnsatisfiedLinkError e) {
-                showToastMessage("Failed to load the library: " + e.getMessage());
-                return false;
-            }
-        }
-
-        sdl_thread_ = new Thread() {
-            @Override
-            public void run() {
-                StartSDL();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        onSdlStopped();
-                    }
-                });
-            }
-        };
-
-        sdl_thread_.start();
-        showToastMessage("SDL has been started");
-
-        return true;
-    }
-
     private boolean isBleSupported(){
         return BluetoothAdapter.getDefaultAdapter() != null &&
                 getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
     }
-
     private void initBT() {
         if(!isBleSupported()){
             showToastMessage("BLE is NOT supported");
@@ -439,6 +392,37 @@ public class MainActivity extends AppCompatActivity {
 
         Toast toast = Toast.makeText(context, message, duration);
         toast.show();
+    }
+
+    private final BroadcastReceiver mainActivityReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if (action == null) {
+                return;
+            }
+
+            switch (action) {
+                case ON_SDL_SERVICE_STOPPED:
+                    start_sdl_button.setEnabled(true);
+                    stop_sdl_button.setEnabled(false);
+                    showToastMessage("SDL service has been stopped");
+                    break;
+
+                case ON_SDL_SERVICE_STARTED:
+                    start_sdl_button.setEnabled(false);
+                    stop_sdl_button.setEnabled(true);
+                    showToastMessage("SDL service has been started");
+                    break;
+            }
+        }
+    };
+
+    private static IntentFilter makeMainActivityIntentFilter() {
+        final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ON_SDL_SERVICE_STOPPED);
+        intentFilter.addAction(ON_SDL_SERVICE_STARTED);
+        return intentFilter;
     }
 
 }
