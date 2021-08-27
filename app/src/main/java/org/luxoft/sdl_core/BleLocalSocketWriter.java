@@ -62,14 +62,18 @@ public class BleLocalSocketWriter implements BleWriter{
     public void Disconnect(){
         Log.i(TAG, "Disconnect BleLocalSocketWriter");
         try {
-            mSocket.getOutputStream().close();
+            if(mSocket != null) {
+                mSocket.getOutputStream().close();
+            }
         } catch (IOException e) {
             Log.e(TAG, "Cannot close output stream");
             e.printStackTrace();
         }
 
         try {
-            mSocket.close();
+            if(mSocket != null) {
+                mSocket.close();
+            }
         } catch (IOException e) {
             Log.e(TAG, "Cannot close socket");
             e.printStackTrace();

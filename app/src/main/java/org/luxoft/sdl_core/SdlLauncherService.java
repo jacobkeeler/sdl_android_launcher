@@ -23,6 +23,7 @@ public class SdlLauncherService extends Service {
 
     private static final int FOREGROUND_SERVICE_ID = 123;
     private static final int SDL_STARTED_DELAY = 2000;
+    private static final int SDL_JOIN_WAIT = 5000;
 
     private boolean is_first_load_ = true;
     private Thread sdl_thread_ = null;
@@ -85,7 +86,7 @@ public class SdlLauncherService extends Service {
         try {
             StopSDLNative();
             if(sdl_thread_.isAlive()) {
-                sdl_thread_.join();
+                sdl_thread_.join(SDL_JOIN_WAIT);
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
