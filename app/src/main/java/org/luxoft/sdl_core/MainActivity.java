@@ -77,12 +77,13 @@ public class MainActivity extends AppCompatActivity {
         stop_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                stopService(
-                        new Intent(MainActivity.this, SdlLauncherService.class));
                 if (isBleSupported() && isBluetoothPermissionGranted()) {
                     final Intent intent = new Intent(ACTION_STOP_BLE);
                     sendBroadcast(intent);
                 }
+                stopService(
+                        new Intent(MainActivity.this, SdlLauncherService.class));
+
             }
         });
 
