@@ -8,9 +8,12 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.widget.Toast;
+
+import androidx.core.app.NotificationCompat;
 
 public class SdlLauncherService extends Service {
 
@@ -18,13 +21,14 @@ public class SdlLauncherService extends Service {
     public final static String ON_SDL_SERVICE_STARTED = "ON_SDL_SERVICE_STARTED";
 
     private static final String APP_ID = "sdl_service";
-    private static final String SERVICE_NAME = "SdlService";
-    private static final String SDL_CONTENT_TITLE = "SDL";
+    private static final String SERVICE_NAME = "SdlLauncherService";
+    private static final String SDL_CONTENT_TITLE = "SDL Android";
 
     private static final int FOREGROUND_SERVICE_ID = 123;
     private static final int SDL_STARTED_DELAY = 2000;
     private static final int SDL_JOIN_WAIT = 5000;
 
+    private String channel_id = null;
     private boolean is_first_load_ = true;
     private Thread sdl_thread_ = null;
 
@@ -76,6 +80,7 @@ public class SdlLauncherService extends Service {
             public void run() {
                 final Intent start_intent = new Intent(ON_SDL_SERVICE_STARTED);
                 getApplicationContext().sendBroadcast(start_intent);
+                updateServiceNotification("SDL core is running");
             }
         }, SDL_STARTED_DELAY);
 
@@ -83,10 +88,15 @@ public class SdlLauncherService extends Service {
     }
     @Override
     public void onDestroy() {
+//        updateServiceNotification("SDL core is stopping...");
+
         try {
             StopSDLNative();
             if(sdl_thread_.isAlive()) {
                 sdl_thread_.join(SDL_JOIN_WAIT);
+            }
+            if (sdl_thread_.isAlive()) {
+                sdl_thread_.interrupt();
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -94,6 +104,8 @@ public class SdlLauncherService extends Service {
 
         final Intent intent = new Intent(ON_SDL_SERVICE_STOPPED);
         getApplicationContext().sendBroadcast(intent);
+
+        stopForeground(true);
 
         super.onDestroy();
     }
@@ -106,17 +118,44 @@ public class SdlLauncherService extends Service {
         toast.show();
     }
 
+    private void updateServiceNotification(String text) {
+        Notification notification = getServiceNotification(text);
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(FOREGROUND_SERVICE_ID, notification);
+    }
+
+
+    private Notification getServiceNotification(String text){
+        if (channel_id == null) {
+            return null;
+        }
+
+        // The PendingIntent to launch our activity if the user selects this notification
+        PendingIntent contentIntent = PendingIntent.getActivity(this,
+                0,new Intent(this, SdlLauncherService.class),0);
+
+        return new NotificationCompat.Builder(this, channel_id)
+                .setContentTitle(SDL_CONTENT_TITLE)
+                .setContentText(text)
+                .setOnlyAlertOnce(true) // so when data is updated don't make sound and alert in android 8.0+
+                .setOngoing(true)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentIntent(contentIntent)
+                .build();
+    }
+
     @SuppressLint("NewApi")
     public void enterForeground() {
-        NotificationChannel channel = new NotificationChannel(APP_ID, SERVICE_NAME, NotificationManager.IMPORTANCE_DEFAULT);
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (notificationManager != null) {
-            notificationManager.createNotificationChannel(channel);
-            Notification serviceNotification = new Notification.Builder(this, channel.getId())
-                    .setContentTitle(SDL_CONTENT_TITLE)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .build();
-            startForeground(FOREGROUND_SERVICE_ID, serviceNotification);
+            if (channel_id == null) {
+                NotificationChannel channel = new NotificationChannel(APP_ID, SERVICE_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+                notificationManager.createNotificationChannel(channel);
+                channel_id = channel.getId();
+            }
+
+            startForeground(FOREGROUND_SERVICE_ID, getServiceNotification("SDL library is starting..."));
         }
     }
 
