@@ -21,6 +21,7 @@ import org.json.JSONObject;
 import java.util.UUID;
 
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE;
+import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
 import static org.luxoft.sdl_core.BleCentralService.MOBILE_DATA_EXTRA;
 import static org.luxoft.sdl_core.BleCentralService.ON_MOBILE_MESSAGE_RECEIVED;
 import static org.luxoft.sdl_core.BleCentralService.ON_BLE_PERIPHERAL_READY;
@@ -173,13 +174,9 @@ class BluetoothHandler {
                     context.sendBroadcast(intent);
                 }
 
-                // Reconnect to this device when it becomes available again
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        central.autoConnectPeripheral(peripheral, peripheralCallback);
-                    }
-                }, 5000);
+                // Restart devices scanning
+                final Intent scan_ble = new Intent(ACTION_SCAN_BLE);
+                context.sendBroadcast(scan_ble);
             }
         }
 

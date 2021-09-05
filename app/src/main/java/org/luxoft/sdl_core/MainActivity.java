@@ -1,7 +1,15 @@
 package org.luxoft.sdl_core;
 
+import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
+import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
+import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
+import static org.luxoft.sdl_core.BleCentralService.ON_BLE_SCAN_STARTED;
+import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
+import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
+
 import android.Manifest;
 import android.app.ProgressDialog;
+import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -19,7 +27,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-
 import androidx.core.app.ActivityCompat;
 import androidx.documentfile.provider.DocumentFile;
 
@@ -31,13 +38,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import android.bluetooth.BluetoothAdapter;
-
-import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
-
-import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
-import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 public class MainActivity extends AppCompatActivity {
 
     static final String TAG = MainActivity.class.getSimpleName();
@@ -427,6 +427,13 @@ public class MainActivity extends AppCompatActivity {
                     start_sdl_button.setEnabled(false);
                     stop_sdl_button.setEnabled(true);
                     showToastMessage("SDL service has been started");
+
+                    final Intent scan_intent = new Intent(ACTION_SCAN_BLE);
+                    sendBroadcast(scan_intent);
+                    break;
+
+                case ON_BLE_SCAN_STARTED:
+                    showToastMessage("Scanning for a BLE devices nearby...");
                     break;
             }
         }
@@ -436,6 +443,7 @@ public class MainActivity extends AppCompatActivity {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ON_SDL_SERVICE_STOPPED);
         intentFilter.addAction(ON_SDL_SERVICE_STARTED);
+        intentFilter.addAction(ON_BLE_SCAN_STARTED);
         return intentFilter;
     }
 
