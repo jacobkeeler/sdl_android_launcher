@@ -23,6 +23,7 @@ import java.util.UUID;
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
 import static org.luxoft.sdl_core.BleCentralService.MOBILE_DATA_EXTRA;
+import static org.luxoft.sdl_core.BleCentralService.MOBILE_DEVICE_DISCONNECTED_EXTRA;
 import static org.luxoft.sdl_core.BleCentralService.ON_MOBILE_MESSAGE_RECEIVED;
 import static org.luxoft.sdl_core.BleCentralService.ON_BLE_PERIPHERAL_READY;
 import static org.luxoft.sdl_core.BleCentralService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
@@ -171,8 +172,12 @@ class BluetoothHandler {
                 if(ctrl_msg != null) {
                     final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
                     intent.putExtra(MOBILE_CONTROL_DATA_EXTRA, ctrl_msg.getBytes());
+                    intent.putExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, true);
                     context.sendBroadcast(intent);
                 }
+
+                mLongReader.resetBuffer();
+                mLongWriter.resetBuffer();
 
                 // Restart devices scanning
                 final Intent scan_ble = new Intent(ACTION_SCAN_BLE);
