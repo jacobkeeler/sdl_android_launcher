@@ -14,8 +14,10 @@ import java.util.TimerTask;
 public class BleCentralService extends Service {
         public static final String TAG = BleCentralService.class.getSimpleName();
         public final static String ACTION_START_BLE = "ACTION_START_BLE";
+        public final static String ACTION_SCAN_BLE = "ACTION_SCAN_BLE";
         public final static String ACTION_STOP_BLE = "ACTION_STOP_BLE";
         public final static String ON_BLE_PERIPHERAL_READY = "ON_BLE_PERIPHERAL_READY";
+        public final static String ON_BLE_SCAN_STARTED = "ON_BLE_SCAN_STARTED";
         public final static String ON_NATIVE_BLE_READY = "ON_NATIVE_BLE_READY";
         public final static String ON_NATIVE_BLE_CONTROL_READY = "ON_NATIVE_BLE_CONTROL_READY";
         public final static String ON_MOBILE_MESSAGE_RECEIVED = "ON_MOBILE_MESSAGE_RECEIVED";
@@ -66,6 +68,16 @@ public class BleCentralService extends Service {
                         Log.i(TAG, "ACTION_START_BLE received by centralServiceReceiver");
                         mNativeBleAdapterThread = new JavaToNativeBleAdapter(BleCentralService.this);
                         mNativeBleAdapterThread.start();
+                        break;
+
+                    case ACTION_SCAN_BLE:
+                        Log.i(TAG, "ACTION_SCAN_BLE received by centralServiceReceiver");
+                        if (mBluetoothHandler != null) {
+                            mBluetoothHandler.connect();
+                        }
+
+                        final Intent scan_started_intent = new Intent(ON_BLE_SCAN_STARTED);
+                        context.sendBroadcast(scan_started_intent);
                         break;
 
                     case ACTION_STOP_BLE:
@@ -131,6 +143,7 @@ public class BleCentralService extends Service {
     private static IntentFilter makeCentralServiceIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_START_BLE);
+        intentFilter.addAction(ACTION_SCAN_BLE);
         intentFilter.addAction(ACTION_STOP_BLE);
         intentFilter.addAction(ON_NATIVE_BLE_READY);
         intentFilter.addAction(ON_NATIVE_BLE_CONTROL_READY);
