@@ -23,7 +23,9 @@ public class BleCentralService extends Service {
         public final static String ON_MOBILE_MESSAGE_RECEIVED = "ON_MOBILE_MESSAGE_RECEIVED";
         public final static String MOBILE_DATA_EXTRA = "MOBILE_DATA_EXTRA";
         public final static String MOBILE_CONTROL_DATA_EXTRA = "MOBILE_CONTROL_DATA_EXTRA";
+        public final static String MOBILE_DEVICE_DISCONNECTED_EXTRA = "MOBILE_DEVICE_DISCONNECTED_EXTRA";
         public final static String ON_MOBILE_CONTROL_MESSAGE_RECEIVED = "ON_MOBILE_CONTROL_MESSAGE_RECEIVED";
+
         BluetoothHandler mBluetoothHandler;
         JavaToNativeBleAdapter mNativeBleAdapterThread;
         BleAdapterWriteMessageCallback mCallback;
@@ -47,7 +49,6 @@ public class BleCentralService extends Service {
 
         private void initBluetoothHandler(){
             mBluetoothHandler = BluetoothHandler.getInstance(this);
-            mBluetoothHandler.connect();
         }
 
         @Override
@@ -131,6 +132,9 @@ public class BleCentralService extends Service {
                         byte[] mobile_control_message = intent.getByteArrayExtra(MOBILE_CONTROL_DATA_EXTRA);
                         if (mNativeBleAdapterThread != null) {
                             mNativeBleAdapterThread.SendControlMessageToNative(mobile_control_message);
+                            if (intent.getBooleanExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, false)) {
+                                mNativeBleAdapterThread.CloseConnectionWithNative();
+                            }
                         }
                         break;
 
