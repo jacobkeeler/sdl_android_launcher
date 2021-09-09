@@ -65,8 +65,8 @@ public class BluetoothLongReader {
                 final byte[] full_message = Arrays.copyOf(mBuffer.array(), mBuffer.capacity() - mBuffer.remaining());
                 mCallback.OnLongMessageReceived(full_message);
             }
-            mBuffer.clear();
-            mBuffer = null;
+
+            resetBuffer();
         }
     }
 }
