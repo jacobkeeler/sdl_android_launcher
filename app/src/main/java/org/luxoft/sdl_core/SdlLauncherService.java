@@ -17,6 +17,8 @@ import androidx.core.app.NotificationCompat;
 
 public class SdlLauncherService extends Service {
 
+    public final static String ACTION_SDL_SERVICE_START = "ACTION_SDL_SERVICE_START";
+    public final static String ACTION_SDL_SERVICE_STOP = "ACTION_SDL_SERVICE_STOP";
     public final static String ON_SDL_SERVICE_STOPPED = "ON_SDL_SERVICE_STOPPED";
     public final static String ON_SDL_SERVICE_STARTED = "ON_SDL_SERVICE_STARTED";
 
@@ -43,12 +45,29 @@ public class SdlLauncherService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        enterForeground();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        String action = intent.getAction();
+        if (action.equals(ACTION_SDL_SERVICE_START)) {
+            if (startSdlThread()) {
+                enterForeground();
+            }
+            return START_NOT_STICKY;
+        }
 
+        if (action.equals(ACTION_SDL_SERVICE_STOP)) {
+            stopSdlThread();
+            stopForeground(true);
+            stopSelfResult(startId);
+            return START_NOT_STICKY;
+        }
+
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    private boolean startSdlThread() {
         if (is_first_load_) {
             try {
                 System.loadLibrary("c++_shared");
@@ -63,7 +82,7 @@ public class SdlLauncherService extends Service {
                 is_first_load_ = false;
             } catch (UnsatisfiedLinkError e) {
                 showToastMessage("Failed to load the library: " + e.getMessage());
-                return super.onStartCommand(intent, flags, startId);
+                return false;
             }
         }
 
@@ -84,11 +103,11 @@ public class SdlLauncherService extends Service {
             }
         }, SDL_STARTED_DELAY);
 
-        return super.onStartCommand(intent, flags, startId);
+        return true;
     }
-    @Override
-    public void onDestroy() {
-//        updateServiceNotification("SDL core is stopping...");
+
+    private void stopSdlThread() {
+        updateServiceNotification("SDL core is stopping...");
 
         try {
             StopSDLNative();
@@ -104,10 +123,6 @@ public class SdlLauncherService extends Service {
 
         final Intent intent = new Intent(ON_SDL_SERVICE_STOPPED);
         getApplicationContext().sendBroadcast(intent);
-
-        stopForeground(true);
-
-        super.onDestroy();
     }
 
     private void showToastMessage(String message) {
@@ -154,7 +169,7 @@ public class SdlLauncherService extends Service {
                 channel_id = channel.getId();
             }
 
-            startForeground(FOREGROUND_SERVICE_ID, getServiceNotification("SDL library is starting..."));
+            startForeground(FOREGROUND_SERVICE_ID, getServiceNotification("SDL core is starting..."));
         }
     }
 
