@@ -30,6 +30,12 @@ public class BluetoothLongWriter {
         mCallback = callback;
     }
 
+    public void resetBuffer() {
+        Log.d(TAG, "Resetting writer queue");
+        mMessagesToSend.clear();
+        mSendInProgress = false;
+    }
+
     private byte[] prepareMessageToSend(final int frames_left, final byte[] message) {
         ByteBuffer buffer = ByteBuffer.allocate(message.length + mFramesCountBytes);
         buffer.putInt(frames_left);

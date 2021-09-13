@@ -18,6 +18,7 @@ public class JavaToNativeBleAdapter extends Thread {
     private static final int CONNECT_CONTROL_WRITER_ID = 4;
     private static final int CONNECT_READER_ID = 5;
     private static final int CONNECT_WRITER_ID = 6;
+    private static final int DISCONNECT_ID = 7;
     public static final String CONTROL_SOCKET_ADDRESS = "./localBleControl";
     public static final String WRITER_SOCKET_ADDRESS = "./localBleWriter";
 
@@ -38,6 +39,12 @@ public class JavaToNativeBleAdapter extends Thread {
     public void EstablishConnectionWithNative() {
         Log.i(TAG, "Establishing communication with native");
         Message message = mHandler.obtainMessage(CONNECT_READER_ID);
+        mHandler.sendMessage(message);
+    }
+
+    public void CloseConnectionWithNative() {
+        Log.i(TAG, "Closing communication with native");
+        Message message = mHandler.obtainMessage(DISCONNECT_ID);
         mHandler.sendMessage(message);
     }
 
@@ -106,6 +113,13 @@ public class JavaToNativeBleAdapter extends Thread {
                                 mContext.sendBroadcast(intent);
                             }
                         });
+                        break;
+                    case DISCONNECT_ID:
+                        Log.i(TAG, "Disconnecting BLE reader");
+                        mReader.Disconnect();
+
+                        Log.i(TAG, "Disconnecting BLE writer");
+                        mWriter.Disconnect();
                         break;
                 }
             }

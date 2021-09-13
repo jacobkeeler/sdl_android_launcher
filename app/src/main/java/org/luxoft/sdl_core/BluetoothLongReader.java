@@ -27,6 +27,14 @@ public class BluetoothLongReader {
         mCallback = callback;
     }
 
+    public void resetBuffer() {
+        Log.d(TAG, "Resetting reader buffer");
+        if (mBuffer != null) {
+            mBuffer.clear();
+            mBuffer = null;
+        }
+    }
+
     private int extractFramesCount(byte[] value) {
         byte[] frames = Arrays.copyOfRange(value, 0, mMessageOffset);
         return ByteBuffer.wrap(frames).getInt();
@@ -57,8 +65,8 @@ public class BluetoothLongReader {
                 final byte[] full_message = Arrays.copyOf(mBuffer.array(), mBuffer.capacity() - mBuffer.remaining());
                 mCallback.OnLongMessageReceived(full_message);
             }
-            mBuffer.clear();
-            mBuffer = null;
+
+            resetBuffer();
         }
     }
 }
