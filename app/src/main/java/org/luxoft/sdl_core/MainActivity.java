@@ -36,6 +36,8 @@ import android.bluetooth.BluetoothAdapter;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
 
+import static org.luxoft.sdl_core.SdlLauncherService.ACTION_SDL_SERVICE_START;
+import static org.luxoft.sdl_core.SdlLauncherService.ACTION_SDL_SERVICE_STOP;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 public class MainActivity extends AppCompatActivity {
@@ -65,8 +67,10 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 start_sdl_button.setEnabled(false);
                 stop_sdl_button.setEnabled(false);
-                startService(
-                        new Intent(MainActivity.this, SdlLauncherService.class));
+                Intent start_intent = new Intent(MainActivity.this, SdlLauncherService.class);
+                start_intent.setAction(ACTION_SDL_SERVICE_START);
+                startService(start_intent);
+
                 if (isBleSupported() && isBluetoothPermissionGranted()) {
                     final Intent intent = new Intent(ACTION_START_BLE);
                     sendBroadcast(intent);
@@ -81,9 +85,10 @@ public class MainActivity extends AppCompatActivity {
                     final Intent intent = new Intent(ACTION_STOP_BLE);
                     sendBroadcast(intent);
                 }
-                stopService(
-                        new Intent(MainActivity.this, SdlLauncherService.class));
-
+              
+                Intent stop_intent = new Intent(MainActivity.this, SdlLauncherService.class);
+                stop_intent.setAction(ACTION_SDL_SERVICE_STOP);
+                startService(stop_intent);
             }
         });
 
@@ -185,6 +190,45 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    private void extractAssets(AssetManager manager, String target_folder, String target_abi) throws IOException {
+        String[] assets = manager.list(target_abi);
+        for (String asset : assets) {
+            Log.d(TAG, "Found asset: " + asset);
+
+            File target_asset_file = new File(target_folder + File.separator + asset);
+            if (target_asset_file.exists()) {
+                Log.d(TAG, "Asset already initialized in " + target_asset_file);
+                continue;
+            }
+
+            String assetName = target_abi + File.separator + asset;
+            Log.d(TAG, "Initializing asset: " + assetName);
+
+            if (manager.list(assetName).length > 0) {
+                if (target_asset_file.mkdir()) {
+                    extractAssets(manager, target_asset_file.getAbsolutePath(), assetName);
+                } else {
+                    Log.e(TAG, "Failed to make folder: " + target_asset_file.getAbsolutePath());
+                }
+                continue;
+            }
+
+            InputStream in = manager.open(assetName);
+            DataOutputStream outw = new DataOutputStream(new FileOutputStream(
+                    target_asset_file.getAbsolutePath()));
+
+            final int max_buffer_size = 80000;
+            byte[] buf = new byte[max_buffer_size];
+            int len;
+            while ((len = in.read(buf, 0, max_buffer_size)) > 0) {
+                outw.write(buf, 0, len);
+            }
+
+            in.close();
+            outw.close();
+        }
+    }
+
     private void initializeAssets() {
         Log.d(TAG, "Initializing assets");
 
@@ -198,33 +242,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             String target_folder = getFilesDir().toString();
-            String[] assets = assetManager.list(target_abi);
-            for (String asset : assets) {
-                Log.d(TAG, "Found asset: " + asset);
-
-                File target_asset_file = new File(target_folder + File.separator + asset);
-                if (target_asset_file.exists()) {
-                    Log.d(TAG, "Asset already initialized in " + target_asset_file);
-                    continue;
-                }
-
-                Log.d(TAG, "Initializing asset: " + target_asset_file);
-
-                InputStream in = assetManager.open(target_abi + File.separator + asset);
-                DataOutputStream outw = new DataOutputStream(new FileOutputStream(
-                    target_asset_file.getAbsolutePath()));
-
-                final int max_buffer_size = 80000;
-                byte[] buf = new byte[max_buffer_size];
-                int len;
-                while ((len = in.read(buf, 0, max_buffer_size)) > 0) {
-                    outw.write(buf, 0, len);
-                }
-
-                in.close();
-                outw.close();
-            }
-
+            extractAssets(assetManager, target_folder, target_abi);
         } catch (IOException e) {
             Log.e(TAG, "Exception during assets initialization: " + e.toString());
         }
