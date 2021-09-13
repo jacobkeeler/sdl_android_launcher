@@ -36,6 +36,8 @@ import android.bluetooth.BluetoothAdapter;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
 
+import static org.luxoft.sdl_core.SdlLauncherService.ACTION_SDL_SERVICE_START;
+import static org.luxoft.sdl_core.SdlLauncherService.ACTION_SDL_SERVICE_STOP;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 public class MainActivity extends AppCompatActivity {
@@ -65,8 +67,10 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 start_sdl_button.setEnabled(false);
                 stop_sdl_button.setEnabled(false);
-                startService(
-                        new Intent(MainActivity.this, SdlLauncherService.class));
+                Intent start_intent = new Intent(MainActivity.this, SdlLauncherService.class);
+                start_intent.setAction(ACTION_SDL_SERVICE_START);
+                startService(start_intent);
+
                 if (isBleSupported() && isBluetoothPermissionGranted()) {
                     final Intent intent = new Intent(ACTION_START_BLE);
                     sendBroadcast(intent);
@@ -77,8 +81,10 @@ public class MainActivity extends AppCompatActivity {
         stop_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                stopService(
-                        new Intent(MainActivity.this, SdlLauncherService.class));
+                Intent stop_intent = new Intent(MainActivity.this, SdlLauncherService.class);
+                stop_intent.setAction(ACTION_SDL_SERVICE_STOP);
+                startService(stop_intent);
+
                 if (isBleSupported() && isBluetoothPermissionGranted()) {
                     final Intent intent = new Intent(ACTION_STOP_BLE);
                     sendBroadcast(intent);
