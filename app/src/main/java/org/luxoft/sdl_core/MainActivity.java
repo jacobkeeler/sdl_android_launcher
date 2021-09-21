@@ -130,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
             stopService(new Intent(MainActivity.this, BleCentralService.class));
         }
         super.onDestroy();
+        unregisterReceiver(mainActivityReceiver);
     }
 
     private void updateExternalDirField(final String path) {

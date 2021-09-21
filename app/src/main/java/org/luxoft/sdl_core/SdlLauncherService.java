@@ -19,8 +19,8 @@ public class SdlLauncherService extends Service {
 
     public final static String ACTION_SDL_SERVICE_START = "ACTION_SDL_SERVICE_START";
     public final static String ACTION_SDL_SERVICE_STOP = "ACTION_SDL_SERVICE_STOP";
-    public final static String ON_SDL_SERVICE_STOPPED = "ON_SDL_SERVICE_STOPPED";
-    public final static String ON_SDL_SERVICE_STARTED = "ON_SDL_SERVICE_STARTED";
+    public final static String ON_SDL_SERVICE_STOPPED = "org.luxoft.sdl_core.ON_SDL_SERVICE_STOPPED";
+    public final static String ON_SDL_SERVICE_STARTED = "org.luxoft.sdl_core.ON_SDL_SERVICE_STARTED";
 
     private static final String APP_ID = "sdl_service";
     private static final String SERVICE_NAME = "SdlLauncherService";
