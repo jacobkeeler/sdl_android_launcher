@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-import static org.luxoft.sdl_core.BluetoothHandler.PREFERRED_MTU;
-
 public class BleLocalSocketReader implements BleReader {
     public static final String TAG = BleLocalSocketReader.class.getSimpleName();
     private LocalServerSocket mServer;

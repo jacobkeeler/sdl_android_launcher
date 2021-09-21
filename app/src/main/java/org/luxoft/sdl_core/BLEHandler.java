@@ -34,16 +34,16 @@ import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_NAME;
 import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ADDRESS;
 import static org.luxoft.sdl_core.BluetoothBleContract.PARAMS;
 
-class BluetoothHandler {
+class BLEHandler {
     public BluetoothCentralManager central;
-    private static BluetoothHandler instance = null;
+    private static BLEHandler instance = null;
     private BluetoothPeripheral mPeripheral = null;
     private final Context context;
     private final Handler handler = new Handler();
     private final BluetoothLongReader mLongReader = new BluetoothLongReader();
     private final BluetoothLongWriter mLongWriter = new BluetoothLongWriter();
 
-    public static final String TAG = BluetoothHandler.class.getSimpleName();
+    public static final String TAG = BLEHandler.class.getSimpleName();
 
     // To request a maximum MTU
     public static final int PREFERRED_MTU = 512;
@@ -92,9 +92,9 @@ class BluetoothHandler {
         return null;
     }
 
-    public static synchronized BluetoothHandler getInstance(Context context) {
+    public static synchronized BLEHandler getInstance(Context context) {
         if (instance == null) {
-            instance = new BluetoothHandler(context);
+            instance = new BLEHandler(context);
         }
         return instance;
     }
@@ -204,7 +204,7 @@ class BluetoothHandler {
         mLongWriter.processWriteOperation(message);
     }
 
-    private BluetoothHandler(Context context) {
+    private BLEHandler(Context context) {
         this.context = context;
 
         mLongReader.setCallback(new BluetoothLongReader.LongReaderCallback() {
@@ -212,7 +212,7 @@ class BluetoothHandler {
             public void OnLongMessageReceived(byte[] message) {
                 final Intent intent = new Intent(ON_MOBILE_MESSAGE_RECEIVED);
                 intent.putExtra(MOBILE_DATA_EXTRA, message);
-                BluetoothHandler.this.context.sendBroadcast(intent);
+                BLEHandler.this.context.sendBroadcast(intent);
             }
         });
 

@@ -2,6 +2,7 @@ package org.luxoft.sdl_core;
 
 import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
+import static org.luxoft.sdl_core.BleCentralService.ACTION_START_CLASSIC_BT;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
 import static org.luxoft.sdl_core.BleCentralService.ON_BLE_SCAN_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
@@ -54,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Button start_sdl_button;
     private Button stop_sdl_button;
+    private Button start_classic_bt_button;
     public static String sdl_cache_folder_path;
     public static String sdl_external_dir_folder_path;
     private static final int ACCESS_LOCATION_REQUEST = 1;
@@ -66,9 +68,11 @@ public class MainActivity extends AppCompatActivity {
 
         start_sdl_button = findViewById(R.id.start_sdl_button);
         stop_sdl_button = findViewById(R.id.stop_sdl_button);
+        start_classic_bt_button = findViewById(R.id.start_classic_bt_button);
 
         start_sdl_button.setEnabled(true);
         stop_sdl_button.setEnabled(false);
+        start_classic_bt_button.setEnabled(true);
 
         start_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -97,6 +101,17 @@ public class MainActivity extends AppCompatActivity {
                 Intent stop_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 stop_intent.setAction(ACTION_SDL_SERVICE_STOP);
                 AndroidTool.startService(MainActivity.this, stop_intent);
+            }
+        });
+
+        start_classic_bt_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                start_classic_bt_button.setEnabled(false);
+                if (isBleSupported() && isBluetoothPermissionGranted()) {
+                    final Intent intent = new Intent(ACTION_START_CLASSIC_BT);
+                    sendBroadcast(intent);
+                }
             }
         });
 
