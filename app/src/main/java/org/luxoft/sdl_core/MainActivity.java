@@ -55,7 +55,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Button start_sdl_button;
     private Button stop_sdl_button;
-    private Button start_classic_bt_button;
+    private Button start_bt_button;
+    private Button start_ble_button;
     public static String sdl_cache_folder_path;
     public static String sdl_external_dir_folder_path;
     private static final int ACCESS_LOCATION_REQUEST = 1;
@@ -68,12 +69,13 @@ public class MainActivity extends AppCompatActivity {
 
         start_sdl_button = findViewById(R.id.start_sdl_button);
         stop_sdl_button = findViewById(R.id.stop_sdl_button);
-        start_classic_bt_button = findViewById(R.id.start_classic_bt_button);
+        start_bt_button = findViewById(R.id.start_bt_button);
+        start_ble_button = findViewById(R.id.start_ble_button);
 
         start_sdl_button.setEnabled(true);
         stop_sdl_button.setEnabled(false);
-        start_classic_bt_button.setEnabled(true);
-
+        start_bt_button.setEnabled(true);
+        start_ble_button.setEnabled(true);
         start_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -82,11 +84,6 @@ public class MainActivity extends AppCompatActivity {
                 Intent start_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 start_intent.setAction(ACTION_SDL_SERVICE_START);
                 AndroidTool.startService(MainActivity.this, start_intent);
-
-                if (isBleSupported() && isBluetoothPermissionGranted()) {
-                    final Intent intent = new Intent(ACTION_START_BLE);
-                    sendBroadcast(intent);
-                }
             }
         });
 
@@ -104,12 +101,45 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        start_classic_bt_button.setOnClickListener(new View.OnClickListener() {
+        start_bt_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                start_classic_bt_button.setEnabled(false);
-                if (isBleSupported() && isBluetoothPermissionGranted()) {
-                    final Intent intent = new Intent(ACTION_START_CLASSIC_BT);
+                if (!isBleSupported() || !isBluetoothPermissionGranted()) {
+                    start_bt_button.setEnabled(false);
+                }
+
+                String buttonText = start_bt_button.getText().toString();
+                if(buttonText.equals("Start BT")) {
+                    start_ble_button.setEnabled(false);
+                    start_bt_button.setText("Stop BT");
+                    //final Intent intent = new Intent(ACTION_START_BT);
+                    //sendBroadcast(intent);
+                }else if(buttonText.equals("Stop BT")){
+                    start_ble_button.setEnabled(true);
+                    start_bt_button.setText("Start BT");
+                    //final Intent intent = new Intent(ACTION_STOP_BT);
+                    //sendBroadcast(intent);
+                }
+            }
+        });
+
+        start_ble_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!isBleSupported() || !isBluetoothPermissionGranted()) {
+                    start_ble_button.setEnabled(false);
+                }
+
+                String buttonText = start_ble_button.getText().toString();
+                if(buttonText.equals("Start BLE")) {
+                    start_bt_button.setEnabled(false);
+                    start_ble_button.setText("Stop BLE");
+                    final Intent intent = new Intent(ACTION_START_BLE);
+                    sendBroadcast(intent);
+                }else if(buttonText.equals("Stop BLE")){
+                    start_bt_button.setEnabled(true);
+                    start_ble_button.setText("Start BLE");
+                    final Intent intent = new Intent(ACTION_STOP_BLE);
                     sendBroadcast(intent);
                 }
             }

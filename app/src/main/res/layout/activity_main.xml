@@ -38,11 +38,18 @@
             android:text="Stop SDL" />
 
         <Button
-            android:id="@+id/start_classic_bt_button"
+            android:id="@+id/start_bt_button"
             android:layout_width="200dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="Start classic BT" />
+            android:text="Start BT" />
+
+        <Button
+            android:id="@+id/start_ble_button"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Start BLE" />
 
         <TextView
             android:id="@+id/cache_folder"
