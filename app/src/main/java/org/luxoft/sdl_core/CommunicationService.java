@@ -8,8 +8,8 @@ import android.content.IntentFilter;
 import android.os.IBinder;
 import android.util.Log;
 
-public class BleCentralService extends Service {
-        public static final String TAG = BleCentralService.class.getSimpleName();
+public class CommunicationService extends Service {
+        public static final String TAG = CommunicationService.class.getSimpleName();
         public final static String ACTION_START_BLE = "ACTION_START_BLE";
         public final static String ACTION_SCAN_BLE = "ACTION_SCAN_BLE";
         public final static String ACTION_STOP_BLE = "ACTION_STOP_BLE";
@@ -24,20 +24,20 @@ public class BleCentralService extends Service {
         public final static String ON_MOBILE_CONTROL_MESSAGE_RECEIVED = "ON_MOBILE_CONTROL_MESSAGE_RECEIVED";
         public final static String ACTION_START_CLASSIC_BT ="ACTION_START_CLASSIC_BT";
 
-        BLEHandler mBLEHandler;
-        ClassicBTHandler mClassicBtHandler;
+        BleHandler mBleHandler;
+        ClassicBtHandler mClassicBtHandler;
         JavaToNativeBleAdapter mNativeBleAdapterThread;
         BleAdapterWriteMessageCallback mCallback;
 
         @Override
         public void onCreate() {
-            registerReceiver(centralServiceReceiver, makeCentralServiceIntentFilter());
+            registerReceiver(communicationServiceReceiver, makeCommunicationServiceIntentFilter());
             super.onCreate();
         }
 
         @Override
         public void onDestroy() {
-            unregisterReceiver(centralServiceReceiver);
+            unregisterReceiver(communicationServiceReceiver);
             super.onDestroy();
         }
 
@@ -47,11 +47,11 @@ public class BleCentralService extends Service {
         }
 
         private void initBluetoothHandler(){
-            mBLEHandler = BLEHandler.getInstance(this);
+            mBleHandler = BleHandler.getInstance(this);
         }
 
         private void initClassicBTHandler(){
-            mClassicBtHandler = ClassicBTHandler.getInstance(this);
+            mClassicBtHandler = ClassicBtHandler.getInstance(this);
         }
 
         @Override
@@ -59,7 +59,7 @@ public class BleCentralService extends Service {
             return super.onStartCommand(intent, flags, startId);
         }
 
-        private final BroadcastReceiver centralServiceReceiver = new BroadcastReceiver() {
+        private final BroadcastReceiver communicationServiceReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 String action = intent.getAction();
@@ -69,15 +69,15 @@ public class BleCentralService extends Service {
 
                 switch (intent.getAction()) {
                     case ACTION_START_BLE:
-                        Log.i(TAG, "ACTION_START_BLE received by centralServiceReceiver");
-                        mNativeBleAdapterThread = new JavaToNativeBleAdapter(BleCentralService.this);
+                        Log.i(TAG, "ACTION_START_BLE received by communicationServiceReceiver");
+                        mNativeBleAdapterThread = new JavaToNativeBleAdapter(CommunicationService.this);
                         mNativeBleAdapterThread.start();
                         break;
 
                     case ACTION_SCAN_BLE:
-                        Log.i(TAG, "ACTION_SCAN_BLE received by centralServiceReceiver");
-                        if (mBLEHandler != null) {
-                            mBLEHandler.connect();
+                        Log.i(TAG, "ACTION_SCAN_BLE received by communicationServiceReceiver");
+                        if (mBleHandler != null) {
+                            mBleHandler.connect();
                         }
 
                         final Intent scan_started_intent = new Intent(ON_BLE_SCAN_STARTED);
@@ -85,8 +85,8 @@ public class BleCentralService extends Service {
                         break;
 
                     case ACTION_STOP_BLE:
-                        Log.i(TAG, "ACTION_STOP_BLE received by centralServiceReceiver");
-                        mBLEHandler.disconnect();
+                        Log.i(TAG, "ACTION_STOP_BLE received by communicationServiceReceiver");
+                        mBleHandler.disconnect();
 
                         try {
                             mNativeBleAdapterThread.setStopThread();
@@ -99,7 +99,7 @@ public class BleCentralService extends Service {
                         break;
 
                     case ON_NATIVE_BLE_READY:
-                        Log.i(TAG, "ON_NATIVE_BLE_READY received by centralServiceReceiver");
+                        Log.i(TAG, "ON_NATIVE_BLE_READY received by communicationServiceReceiver");
                         mCallback = new BleAdapterWriteMessageCallback();
                         if (mNativeBleAdapterThread != null) {
                             mNativeBleAdapterThread.ReadMessageFromNative(mCallback);
@@ -108,12 +108,12 @@ public class BleCentralService extends Service {
                         break;
 
                     case ON_NATIVE_BLE_CONTROL_READY:
-                        Log.i(TAG, "ON_NATIVE_BLE_CONTROL_READY received by centralServiceReceiver");
+                        Log.i(TAG, "ON_NATIVE_BLE_CONTROL_READY received by communicationServiceReceiver");
                         initBluetoothHandler();
                         break;
 
                     case ON_BLE_PERIPHERAL_READY:
-                        Log.i(TAG, "ON_BLE_PERIPHERAL_READY received by centralServiceReceiver");
+                        Log.i(TAG, "ON_BLE_PERIPHERAL_READY received by communicationServiceReceiver");
                         if (mNativeBleAdapterThread != null) {
                             mNativeBleAdapterThread.EstablishConnectionWithNative();
                         }
@@ -121,7 +121,7 @@ public class BleCentralService extends Service {
                         break;
 
                     case ON_MOBILE_MESSAGE_RECEIVED:
-                        Log.i(TAG, "ON_MOBILE_MESSAGE_RECEIVED received by centralServiceReceiver");
+                        Log.i(TAG, "ON_MOBILE_MESSAGE_RECEIVED received by communicationServiceReceiver");
                         byte[] mobile_message = intent.getByteArrayExtra(MOBILE_DATA_EXTRA);
                         if (mNativeBleAdapterThread != null) {
                             mNativeBleAdapterThread.ForwardMessageToNative(mobile_message);
@@ -130,7 +130,7 @@ public class BleCentralService extends Service {
                         break;
 
                     case ON_MOBILE_CONTROL_MESSAGE_RECEIVED:
-                        Log.i(TAG, "ON_MOBILE_CONTROL_MESSAGE_RECEIVED received by centralServiceReceiver");
+                        Log.i(TAG, "ON_MOBILE_CONTROL_MESSAGE_RECEIVED received by communicationServiceReceiver");
                         byte[] mobile_control_message = intent.getByteArrayExtra(MOBILE_CONTROL_DATA_EXTRA);
                         if (mNativeBleAdapterThread != null) {
                             mNativeBleAdapterThread.SendControlMessageToNative(mobile_control_message);
@@ -141,8 +141,8 @@ public class BleCentralService extends Service {
                         break;
 
                     case ACTION_START_CLASSIC_BT:
-                        Log.i(TAG, "ACTION_START_CLASSIC_BT received by centralServiceReceiver");
-                        mBLEHandler.disconnect();
+                        Log.i(TAG, "ACTION_START_CLASSIC_BT received by communicationServiceReceiver");
+                        mBleHandler.disconnect();
                         initClassicBTHandler();
                         mClassicBtHandler.DoDiscovery();
                         break;
@@ -153,7 +153,7 @@ public class BleCentralService extends Service {
             }
         };
 
-    private static IntentFilter makeCentralServiceIntentFilter() {
+    private static IntentFilter makeCommunicationServiceIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_START_BLE);
         intentFilter.addAction(ACTION_SCAN_BLE);
@@ -169,7 +169,7 @@ public class BleCentralService extends Service {
 
     class BleAdapterWriteMessageCallback implements BleAdapterMessageCallback{
         public void OnMessageReceived(byte[] rawMessage) {
-            mBLEHandler.writeMessage(rawMessage);
+            mBleHandler.writeMessage(rawMessage);
         }
     };
 }

@@ -7,8 +7,8 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
-import static org.luxoft.sdl_core.BleCentralService.ON_NATIVE_BLE_READY;
-import static org.luxoft.sdl_core.BleCentralService.ON_NATIVE_BLE_CONTROL_READY;
+import static org.luxoft.sdl_core.CommunicationService.ON_NATIVE_BLE_READY;
+import static org.luxoft.sdl_core.CommunicationService.ON_NATIVE_BLE_CONTROL_READY;
 
 public class JavaToNativeBleAdapter extends Thread {
     public static final String TAG = JavaToNativeBleAdapter.class.getSimpleName();

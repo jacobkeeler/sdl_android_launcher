@@ -1,10 +1,9 @@
 package org.luxoft.sdl_core;
 
-import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_START_CLASSIC_BT;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ON_BLE_SCAN_STARTED;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_SCAN_BLE;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BLE;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_BLE;
+import static org.luxoft.sdl_core.CommunicationService.ON_BLE_SCAN_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
 
@@ -39,15 +38,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import android.bluetooth.BluetoothAdapter;
-
-import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
-
 import static org.luxoft.sdl_core.SdlLauncherService.ACTION_SDL_SERVICE_START;
 import static org.luxoft.sdl_core.SdlLauncherService.ACTION_SDL_SERVICE_STOP;
-import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
-import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -163,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
             initBT();
         }
         if (isBleSupported() && isBluetoothPermissionGranted()) {
-            startService(new Intent(MainActivity.this, BleCentralService.class));
+            startService(new Intent(MainActivity.this, CommunicationService.class));
         }
 
         registerReceiver(mainActivityReceiver, makeMainActivityIntentFilter());
@@ -172,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy (){
         if (isBleSupported() && isBluetoothPermissionGranted()) {
-            stopService(new Intent(MainActivity.this, BleCentralService.class));
+            stopService(new Intent(MainActivity.this, CommunicationService.class));
         }
         super.onDestroy();
         unregisterReceiver(mainActivityReceiver);

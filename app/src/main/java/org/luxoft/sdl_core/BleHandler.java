@@ -21,29 +21,29 @@ import org.json.JSONObject;
 import java.util.UUID;
 
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
-import static org.luxoft.sdl_core.BleCentralService.MOBILE_DATA_EXTRA;
-import static org.luxoft.sdl_core.BleCentralService.MOBILE_DEVICE_DISCONNECTED_EXTRA;
-import static org.luxoft.sdl_core.BleCentralService.ON_MOBILE_MESSAGE_RECEIVED;
-import static org.luxoft.sdl_core.BleCentralService.ON_BLE_PERIPHERAL_READY;
-import static org.luxoft.sdl_core.BleCentralService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
-import static org.luxoft.sdl_core.BleCentralService.MOBILE_CONTROL_DATA_EXTRA;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_SCAN_BLE;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_DATA_EXTRA;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_DEVICE_DISCONNECTED_EXTRA;
+import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_MESSAGE_RECEIVED;
+import static org.luxoft.sdl_core.CommunicationService.ON_BLE_PERIPHERAL_READY;
+import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_CONTROL_DATA_EXTRA;
 
 import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ACTION;
 import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_NAME;
 import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ADDRESS;
 import static org.luxoft.sdl_core.BluetoothBleContract.PARAMS;
 
-class BLEHandler {
+class BleHandler {
     public BluetoothCentralManager central;
-    private static BLEHandler instance = null;
+    private static BleHandler instance = null;
     private BluetoothPeripheral mPeripheral = null;
     private final Context context;
     private final Handler handler = new Handler();
     private final BluetoothLongReader mLongReader = new BluetoothLongReader();
     private final BluetoothLongWriter mLongWriter = new BluetoothLongWriter();
 
-    public static final String TAG = BLEHandler.class.getSimpleName();
+    public static final String TAG = BleHandler.class.getSimpleName();
 
     // To request a maximum MTU
     public static final int PREFERRED_MTU = 512;
@@ -92,9 +92,9 @@ class BLEHandler {
         return null;
     }
 
-    public static synchronized BLEHandler getInstance(Context context) {
+    public static synchronized BleHandler getInstance(Context context) {
         if (instance == null) {
-            instance = new BLEHandler(context);
+            instance = new BleHandler(context);
         }
         return instance;
     }
@@ -204,7 +204,7 @@ class BLEHandler {
         mLongWriter.processWriteOperation(message);
     }
 
-    private BLEHandler(Context context) {
+    private BleHandler(Context context) {
         this.context = context;
 
         mLongReader.setCallback(new BluetoothLongReader.LongReaderCallback() {
@@ -212,7 +212,7 @@ class BLEHandler {
             public void OnLongMessageReceived(byte[] message) {
                 final Intent intent = new Intent(ON_MOBILE_MESSAGE_RECEIVED);
                 intent.putExtra(MOBILE_DATA_EXTRA, message);
-                BLEHandler.this.context.sendBroadcast(intent);
+                BleHandler.this.context.sendBroadcast(intent);
             }
         });
 

@@ -15,9 +15,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
-public class ClassicBTHandler {
+public class ClassicBtHandler {
     private final Context context;
-    private static ClassicBTHandler instance = null;
+    private static ClassicBtHandler instance = null;
     private BluetoothAdapter mBtAdapter = BluetoothAdapter.getDefaultAdapter();
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
@@ -37,16 +37,16 @@ public class ClassicBTHandler {
     public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     public static final int STATE_CONNECTED = 3;  // now connected to a remote device
 
-    public static final String TAG = ClassicBTHandler.class.getSimpleName();
+    public static final String TAG = ClassicBtHandler.class.getSimpleName();
 
-    public static synchronized ClassicBTHandler getInstance(Context context) {
+    public static synchronized ClassicBtHandler getInstance(Context context) {
         if (instance == null) {
-            instance = new ClassicBTHandler(context);
+            instance = new ClassicBtHandler(context);
         }
         return instance;
     }
 
-    private ClassicBTHandler(Context context) {
+    private ClassicBtHandler(Context context) {
         this.context = context;
         // Register for broadcasts when a device is discovered.
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
@@ -163,7 +163,7 @@ public class ClassicBTHandler {
             }
 
             // Reset the ConnectThread because we're done
-            synchronized (ClassicBTHandler.this) {
+            synchronized (ClassicBtHandler.this) {
                 mConnectThread = null;
             }
 
@@ -337,7 +337,7 @@ public class ClassicBTHandler {
 
                 // If a connection was accepted
                 if (socket != null) {
-                    synchronized (ClassicBTHandler.this) {
+                    synchronized (ClassicBtHandler.this) {
                         switch (mState) {
                             case STATE_LISTEN:
                             case STATE_CONNECTING:
