@@ -7,12 +7,12 @@ import android.util.Log;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-public class BleLocalSocketWriter implements BleWriter{
-    public static final String TAG = BleLocalSocketWriter.class.getSimpleName();
+public class LocalSocketSender implements IpcSender{
+    public static final String TAG = LocalSocketSender.class.getSimpleName();
     LocalSocket mSocket;
     private String mSocketName;
 
-    public BleLocalSocketWriter(String socket_name) {
+    public LocalSocketSender(String socket_name) {
         mSocketName = socket_name;
     }
 

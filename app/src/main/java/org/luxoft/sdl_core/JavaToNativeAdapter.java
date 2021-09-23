@@ -7,11 +7,11 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
-import static org.luxoft.sdl_core.CommunicationService.ON_NATIVE_BLE_READY;
-import static org.luxoft.sdl_core.CommunicationService.ON_NATIVE_BLE_CONTROL_READY;
+import static org.luxoft.sdl_core.CommunicationService.ON_NATIVE_CONTROL_READY;
+import static org.luxoft.sdl_core.CommunicationService.ON_NATIVE_READY;
 
-public class JavaToNativeBleAdapter extends Thread {
-    public static final String TAG = JavaToNativeBleAdapter.class.getSimpleName();
+public class JavaToNativeAdapter extends Thread {
+    public static final String TAG = JavaToNativeAdapter.class.getSimpleName();
     private static final int WRITE_ID = 1;
     private static final int READ_ID = 2;
     private static final int WRITE_CONTROL_ID = 3;
@@ -20,19 +20,19 @@ public class JavaToNativeBleAdapter extends Thread {
     private static final int CONNECT_WRITER_ID = 6;
     private static final int DISCONNECT_ID = 7;
     public static final String CONTROL_SOCKET_ADDRESS = "./localBleControl";
-    public static final String WRITER_SOCKET_ADDRESS = "./localBleWriter";
+
 
     Handler mHandler;
-    BleWriter mWriter;
-    BleWriter mControlWriter;
-    BleReader mReader;
+    IpcSender mWriter;
+    IpcSender mControlWriter;
+    IpcReceiver mReader;
     BleAdapterMessageCallback mCallback;
     private final Context mContext;
 
-    JavaToNativeBleAdapter(Context context){
-        mControlWriter = new BleLocalSocketWriter(CONTROL_SOCKET_ADDRESS);
-        mWriter = new BleLocalSocketWriter(WRITER_SOCKET_ADDRESS);
-        mReader = new BleLocalSocketReader();
+    JavaToNativeAdapter(Context context, String sender_socket_address, String receiver_socket_address){
+        mControlWriter = new LocalSocketSender(CONTROL_SOCKET_ADDRESS);
+        mWriter = new LocalSocketSender(sender_socket_address);
+        mReader = new LocalSocketReceiver(receiver_socket_address);
         mContext = context;
     }
 
@@ -98,8 +98,8 @@ public class JavaToNativeBleAdapter extends Thread {
                         mWriter.Connect(new OnConnectCallback() {
                             @Override
                             public void Execute() {
-                                Log.i(TAG, "BLE writer is connected");
-                                final Intent intent = new Intent(ON_NATIVE_BLE_READY);
+                                Log.i(TAG, "Writer is connected");
+                                final Intent intent = new Intent(ON_NATIVE_READY);
                                 mContext.sendBroadcast(intent);
                             }
                         });
@@ -108,17 +108,17 @@ public class JavaToNativeBleAdapter extends Thread {
                         mControlWriter.Connect(new OnConnectCallback() {
                             @Override
                             public void Execute() {
-                                Log.i(TAG, "BLE control writer is connected");
-                                final Intent intent = new Intent(ON_NATIVE_BLE_CONTROL_READY);
+                                Log.i(TAG, "Control writer is connected");
+                                final Intent intent = new Intent(ON_NATIVE_CONTROL_READY);
                                 mContext.sendBroadcast(intent);
                             }
                         });
                         break;
                     case DISCONNECT_ID:
-                        Log.i(TAG, "Disconnecting BLE reader");
+                        Log.i(TAG, "Disconnecting reader");
                         mReader.Disconnect();
 
-                        Log.i(TAG, "Disconnecting BLE writer");
+                        Log.i(TAG, "Disconnecting writer");
                         mWriter.Disconnect();
                         break;
                 }

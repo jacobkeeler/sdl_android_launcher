@@ -1,8 +1,9 @@
 package org.luxoft.sdl_core;
 
-import static org.luxoft.sdl_core.CommunicationService.ACTION_SCAN_BLE;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BLE;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BT;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_BLE;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_BT;
 import static org.luxoft.sdl_core.CommunicationService.ON_BLE_SCAN_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
@@ -104,13 +105,13 @@ public class MainActivity extends AppCompatActivity {
                 if(buttonText.equals("Start BT")) {
                     start_ble_button.setEnabled(false);
                     start_bt_button.setText("Stop BT");
-                    //final Intent intent = new Intent(ACTION_START_BT);
-                    //sendBroadcast(intent);
+                    final Intent intent = new Intent(ACTION_START_BT);
+                    sendBroadcast(intent);
                 }else if(buttonText.equals("Stop BT")){
                     start_ble_button.setEnabled(true);
                     start_bt_button.setText("Start BT");
-                    //final Intent intent = new Intent(ACTION_STOP_BT);
-                    //sendBroadcast(intent);
+                    final Intent intent = new Intent(ACTION_STOP_BLE);
+                    sendBroadcast(intent);
                 }
             }
         });
@@ -131,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
                 }else if(buttonText.equals("Stop BLE")){
                     start_bt_button.setEnabled(true);
                     start_ble_button.setText("Start BLE");
-                    final Intent intent = new Intent(ACTION_STOP_BLE);
+                    final Intent intent = new Intent(ACTION_STOP_BT);
                     sendBroadcast(intent);
                 }
             }
@@ -478,9 +479,6 @@ public class MainActivity extends AppCompatActivity {
                     start_sdl_button.setEnabled(false);
                     stop_sdl_button.setEnabled(true);
                     showToastMessage("SDL service has been started");
-
-                    final Intent scan_intent = new Intent(ACTION_SCAN_BLE);
-                    sendBroadcast(scan_intent);
                     break;
 
                 case ON_BLE_SCAN_STARTED:

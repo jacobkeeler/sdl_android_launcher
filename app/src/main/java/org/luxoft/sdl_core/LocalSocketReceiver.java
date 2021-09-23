@@ -8,8 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-public class BleLocalSocketReader implements BleReader {
-    public static final String TAG = BleLocalSocketReader.class.getSimpleName();
+public class LocalSocketReceiver implements IpcReceiver {
+    public static final String TAG = LocalSocketReceiver.class.getSimpleName();
     private LocalServerSocket mServer;
     private LocalSocket mReceiver;
     private InputStream mInputStream;
@@ -19,24 +19,27 @@ public class BleLocalSocketReader implements BleReader {
     private Thread mLoopTread;
 
     public static final int mBufferSize = 131072; // Copied from SDL INI file
-    public static String SOCKET_ADDRESS = "./localBleReader";
+    private String mSocketName;
 
+    public LocalSocketReceiver(String socket_name) {
+        mSocketName = socket_name;
+    }
 
     @Override
     public void Connect(OnConnectCallback callback){
-        Log.i(TAG, "Connect BleLocalSocketReader");
+        Log.i(TAG, "Connect LocalSocketReceiver");
         try {
-            mServer = new LocalServerSocket(SOCKET_ADDRESS);
+            mServer = new LocalServerSocket(mSocketName);
         } catch (IOException e) {
             Log.e(TAG, "The localSocketServer creation failed");
             e.printStackTrace();
         }
 
         try {
-            Log.d(TAG, "BleLocalSocketReader begins to accept()");
+            Log.d(TAG, "LocalSocketReceiver begins to accept()");
             mReceiver = mServer.accept();
         } catch (IOException e) {
-            Log.e(TAG, "BleLocalSocketReader accept() failed");
+            Log.e(TAG, "LocalSocketReceiver accept() failed");
             e.printStackTrace();
         }
 
@@ -47,7 +50,7 @@ public class BleLocalSocketReader implements BleReader {
             e.printStackTrace();
         }
 
-        Log.d(TAG, "The client connect to BleLocalSocketReader");
+        Log.d(TAG, "The client connect to LocalSocketReceiver");
         ReadLoop readLoop = new ReadLoop();
         mLoopTread = new Thread(readLoop);
         mLoopTread.start();
@@ -57,7 +60,7 @@ public class BleLocalSocketReader implements BleReader {
 
     @Override
     public void Disconnect(){
-        Log.i(TAG, "Disconnect BleLocalSocketReader");
+        Log.i(TAG, "Disconnect LocalSocketReceiver");
 
         if (mLoopTread != null) {
             mLoopTread.interrupt();
