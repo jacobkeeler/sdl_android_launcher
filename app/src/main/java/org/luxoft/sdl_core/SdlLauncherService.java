@@ -1,6 +1,5 @@
 package org.luxoft.sdl_core;
 
-import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -22,6 +21,7 @@ public class SdlLauncherService extends Service {
 
     public final static String ACTION_SDL_SERVICE_START = "ACTION_SDL_SERVICE_START";
     public final static String ACTION_SDL_SERVICE_STOP = "ACTION_SDL_SERVICE_STOP";
+    public final static String IS_SDL_SERVICE_THREAD_ALIVE = "IS_SDL_SERVICE_THREAD_ALIVE";
     public final static String ON_SDL_SERVICE_STOPPED = "org.luxoft.sdl_core.ON_SDL_SERVICE_STOPPED";
     public final static String ON_SDL_SERVICE_STARTED = "org.luxoft.sdl_core.ON_SDL_SERVICE_STARTED";
 
@@ -149,8 +149,12 @@ public class SdlLauncherService extends Service {
 
     private Notification getServiceNotification(String text){
         // The PendingIntent to launch our activity if the user selects this notification
-        PendingIntent contentIntent = PendingIntent.getActivity(this,
-                0,new Intent(this, SdlLauncherService.class),0);
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        boolean isThreadAlive = sdl_thread_ != null && sdl_thread_.isAlive();
+        intent.putExtra(IS_SDL_SERVICE_THREAD_ALIVE, isThreadAlive);
+
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (channel_id == null) {
