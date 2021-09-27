@@ -10,10 +10,23 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
+
+import static org.luxoft.sdl_core.BluetoothBleContract.PARAMS;
+import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ACTION;
+import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ADDRESS;
+import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_NAME;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_CONTROL_DATA_EXTRA;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_DATA_EXTRA;
+import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
+import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_MESSAGE_RECEIVED;
+import static org.luxoft.sdl_core.CommunicationService.ON_PERIPHERAL_READY;
 
 public class ClassicBtHandler {
     private final Context context;
@@ -23,9 +36,11 @@ public class ClassicBtHandler {
     private ConnectedThread mConnectedThread;
     private AcceptThread mAcceptThread;
     private int mState;
+    private final BluetoothLongReader mLongReader = new BluetoothLongReader();
+    private final BluetoothLongWriter mLongWriter = new BluetoothLongWriter();
 
     // Name for the SDP record when creating server socket
-    private static final String NAME_INSECURE = "SDLCoreInsecure";
+    private static final String SERVICE_NAME = "SdlProxy";
 
     // Unique UUID for this application
     private static final UUID SDL_UUID =
@@ -52,6 +67,16 @@ public class ClassicBtHandler {
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         context.registerReceiver(mReceiver, filter);
         mState = STATE_NONE;
+        mLongReader.setMtu(1024); //tmp for now
+
+        mLongReader.setCallback(new BluetoothLongReader.LongReaderCallback() {
+            @Override
+            public void OnLongMessageReceived(byte[] message) {
+                final Intent intent = new Intent(ON_MOBILE_MESSAGE_RECEIVED);
+                intent.putExtra(MOBILE_DATA_EXTRA, message);
+                ClassicBtHandler.this.context.sendBroadcast(intent);
+            }
+        });
     }
 
     public void DoDiscovery() {
@@ -155,12 +180,13 @@ public class ClassicBtHandler {
                 try {
                     mmSocket.close();
                 } catch (IOException e2) {
-                    Log.e(TAG, "unable to close() socket during" +
-                            "connection failure", e2);
+                    Log.e(TAG, "unable to close()" +
+                            " socket during connection failure", e2);
                 }
-                //connectionFailed();
-                return;
             }
+                //connectionFailed();
+                //return;*/
+            //}
 
             // Reset the ConnectThread because we're done
             synchronized (ClassicBtHandler.this) {
@@ -211,14 +237,37 @@ public class ClassicBtHandler {
 
         // Start the thread to manage the connection and perform transmissions
         mConnectedThread = new ConnectedThread(socket);
-        mConnectedThread.start();
 
-        // Send the name of the connected device back to the UI Activity
-        /*Message msg = mHandler.obtainMessage(Constants.MESSAGE_DEVICE_NAME);
-        Bundle bundle = new Bundle();
-        bundle.putString(Constants.DEVICE_NAME, device.getName());
-        msg.setData(bundle);
-        mHandler.sendMessage(msg);*/
+        String ctrl_msg = GenerateConnectedMessage(device);
+        if(ctrl_msg != null) {
+            final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
+            intent.putExtra(MOBILE_CONTROL_DATA_EXTRA, ctrl_msg.getBytes());
+            context.sendBroadcast(intent);
+        }
+
+        final Intent intent = new Intent(ON_PERIPHERAL_READY);
+        context.sendBroadcast(intent);
+
+        //mConnectedThread.start();
+
+    }
+
+    public void start_connected_thread(){
+        mConnectedThread.start();
+    }
+    private String GenerateConnectedMessage(BluetoothDevice device) {
+        try {
+            JSONObject message = new JSONObject();
+            message.put(PARAM_ACTION, "ON_DEVICE_CONNECTED");
+            JSONObject params = new JSONObject();
+            params.put(PARAM_NAME, device.getName());
+            params.put(PARAM_ADDRESS, device.getAddress());
+            message.put(PARAMS, params);
+            return message.toString();
+        } catch (JSONException ex) {
+            Log.i(TAG, "ON_DEVICE_CONNECTED msg Failed", ex);
+        }
+        return null;
     }
 
     /**
@@ -259,10 +308,7 @@ public class ClassicBtHandler {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
-
-                    // Send the obtained bytes to the UI Activity
-                    //mHandler.obtainMessage(Constants.MESSAGE_READ, bytes, -1, buffer)
-                           // .sendToTarget();
+                    mLongReader.processReadOperation(buffer);
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
                     //connectionLost();
@@ -312,7 +358,7 @@ public class ClassicBtHandler {
             // Create a new listening server socket
             try {
                 tmp = mBtAdapter.listenUsingInsecureRfcommWithServiceRecord(
-                        NAME_INSECURE, SDL_UUID);
+                        SERVICE_NAME, SDL_UUID);
             } catch (IOException e) {
                 Log.e(TAG, "Socket listen() failed", e);
             }
@@ -371,5 +417,8 @@ public class ClassicBtHandler {
         }
     }
 
+    public void writeMessage(byte[] message){
+        mLongWriter.processWriteOperation(message);
+    }
 
 }

@@ -25,7 +25,7 @@ import static org.luxoft.sdl_core.CommunicationService.ACTION_SCAN_BLE;
 import static org.luxoft.sdl_core.CommunicationService.MOBILE_DATA_EXTRA;
 import static org.luxoft.sdl_core.CommunicationService.MOBILE_DEVICE_DISCONNECTED_EXTRA;
 import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_MESSAGE_RECEIVED;
-import static org.luxoft.sdl_core.CommunicationService.ON_BLE_PERIPHERAL_READY;
+import static org.luxoft.sdl_core.CommunicationService.ON_PERIPHERAL_READY;
 import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
 import static org.luxoft.sdl_core.CommunicationService.MOBILE_CONTROL_DATA_EXTRA;
 
@@ -108,7 +108,7 @@ class BleHandler {
             // Try to turn on notification
             peripheral.setNotify(SDL_TESTER_SERVICE_UUID, MOBILE_NOTIFICATION_CHARACTERISTIC, true);
 
-            final Intent intent = new Intent(ON_BLE_PERIPHERAL_READY);
+            final Intent intent = new Intent(ON_PERIPHERAL_READY);
             context.sendBroadcast(intent);
         }
 

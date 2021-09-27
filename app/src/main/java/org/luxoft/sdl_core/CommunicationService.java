@@ -13,7 +13,7 @@ public class CommunicationService extends Service {
         public final static String ACTION_START_BLE = "ACTION_START_BLE";
         public final static String ACTION_SCAN_BLE = "ACTION_SCAN_BLE";
         public final static String ACTION_STOP_BLE = "ACTION_STOP_BLE";
-        public final static String ON_BLE_PERIPHERAL_READY = "ON_BLE_PERIPHERAL_READY";
+        public final static String ON_PERIPHERAL_READY = "ON_PERIPHERAL_READY";
         public final static String ON_BLE_SCAN_STARTED = "ON_BLE_SCAN_STARTED";
         public final static String ON_NATIVE_READY = "ON_NATIVE_READY";
         public final static String ON_NATIVE_CONTROL_READY = "ON_NATIVE_CONTROL_READY";
@@ -37,11 +37,10 @@ public class CommunicationService extends Service {
         CLASSIC_BT
         }
 
-
         BleHandler mBleHandler;
         ClassicBtHandler mClassicBtHandler;
         JavaToNativeAdapter mNativeAdapterThread;
-        BleAdapterWriteMessageCallback mCallback;
+        BleAdapterMessageCallback mCallback;
         TransportType mCurrentTransport;
 
         @Override
@@ -96,7 +95,7 @@ public class CommunicationService extends Service {
                         Log.i(TAG, "ACTION_START_BT received by communicationServiceReceiver");
                         mCurrentTransport = TransportType.CLASSIC_BT;
                         mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
-                                BLE_SENDER_SOCKET_ADDRESS, BLE_RECEIVER_SOCKET_ADDRESS);
+                                BT_SENDER_SOCKET_ADDRESS, BT_RECEIVER_SOCKET_ADDRESS);
                         mNativeAdapterThread.start();
                         break;
 
@@ -126,26 +125,43 @@ public class CommunicationService extends Service {
 
                     case ON_NATIVE_READY:
                         Log.i(TAG, "ON_NATIVE_READY received by communicationServiceReceiver");
-                        mCallback = new BleAdapterWriteMessageCallback();
-                        if (mNativeAdapterThread != null) {
-                            mNativeAdapterThread.ReadMessageFromNative(mCallback);
-                        }
 
+                        switch (mCurrentTransport) {
+                            case BLE:
+                                mCallback = new BleAdapterWriteMessageCallback();
+                                if (mNativeAdapterThread != null) {
+                                    mNativeAdapterThread.ReadMessageFromNative(mCallback);
+                                }
+                                break;
+
+                            case CLASSIC_BT:
+                                mCallback = new BtAdapterWriteMessageCallback();
+                                if (mNativeAdapterThread != null) {
+                                    mNativeAdapterThread.ReadMessageFromNative(mCallback);
+                                }
+                                mClassicBtHandler.start_connected_thread();
+                                break;
+                        }
                         break;
 
                     case ON_NATIVE_CONTROL_READY:
                         Log.i(TAG, "ON_NATIVE_CONTROL_READY received by communicationServiceReceiver");
-                        if(TransportType.BLE == mCurrentTransport) {
-                            initBleHandler();
-                            mBleHandler.connect();
-                        } else if(TransportType.CLASSIC_BT == mCurrentTransport) {
-                            initClassicBTHandler();
-                            mClassicBtHandler.DoDiscovery();
+                        switch (mCurrentTransport) {
+                            case BLE:
+                                initBleHandler();
+                                mBleHandler.connect();
+                                break;
+
+                            case CLASSIC_BT:
+                                initClassicBTHandler();
+                                mClassicBtHandler.DoDiscovery();
+                                break;
                         }
                         break;
 
-                    case ON_BLE_PERIPHERAL_READY:
-                        Log.i(TAG, "ON_BLE_PERIPHERAL_READY received by communicationServiceReceiver");
+
+                    case ON_PERIPHERAL_READY:
+                        Log.i(TAG, "ON_PERIPHERAL_READY received by communicationServiceReceiver");
                         if (mNativeAdapterThread != null) {
                             mNativeAdapterThread.EstablishConnectionWithNative();
                         }
@@ -187,15 +203,21 @@ public class CommunicationService extends Service {
         intentFilter.addAction(ACTION_STOP_BT);
         intentFilter.addAction(ON_NATIVE_READY);
         intentFilter.addAction(ON_NATIVE_CONTROL_READY);
-        intentFilter.addAction(ON_BLE_PERIPHERAL_READY);
+        intentFilter.addAction(ON_PERIPHERAL_READY);
         intentFilter.addAction(ON_MOBILE_MESSAGE_RECEIVED);
         intentFilter.addAction(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
         return intentFilter;
     }
 
-    class BleAdapterWriteMessageCallback implements BleAdapterMessageCallback{
+    class BleAdapterWriteMessageCallback implements BleAdapterMessageCallback {
         public void OnMessageReceived(byte[] rawMessage) {
             mBleHandler.writeMessage(rawMessage);
+        }
+    };
+
+    class BtAdapterWriteMessageCallback implements BleAdapterMessageCallback {
+        public void OnMessageReceived(byte[] rawMessage) {
+            mClassicBtHandler.writeMessage(rawMessage);
         }
     };
 }
