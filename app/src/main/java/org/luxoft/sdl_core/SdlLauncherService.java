@@ -62,19 +62,12 @@ public class SdlLauncherService extends Service {
 
         if (action.equals(ACTION_SDL_SERVICE_STOP)) {
             stopSdlThread();
+            exitForeground();
             stopSelfResult(startId);
             return START_NOT_STICKY;
         }
 
         return super.onStartCommand(intent, flags, startId);
-    }
-
-    @Override
-    public void onDestroy() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            stopForeground(true);
-        }
-        super.onDestroy();
     }
 
     private boolean startSdlThread() {
@@ -146,7 +139,7 @@ public class SdlLauncherService extends Service {
     private void updateServiceNotification(String text) {
         Notification notification = getServiceNotification(text);
         if (notification == null) {
-            Log.w(TAG, "Cannot update notification. Channel_id is: " + channel_id);
+            Log.w(TAG, "Cannot update notification");
             return;
         }
 
@@ -155,37 +148,65 @@ public class SdlLauncherService extends Service {
     }
 
     private Notification getServiceNotification(String text){
-        if (channel_id == null) {
-            return null;
-        }
-
         // The PendingIntent to launch our activity if the user selects this notification
         PendingIntent contentIntent = PendingIntent.getActivity(this,
                 0,new Intent(this, SdlLauncherService.class),0);
 
-        return new NotificationCompat.Builder(this, channel_id)
-                .setContentTitle(SDL_CONTENT_TITLE)
-                .setContentText(text)
-                .setOnlyAlertOnce(true) // so when data is updated don't make sound and alert in android 8.0+
-                .setOngoing(true)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentIntent(contentIntent)
-                .build();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (channel_id == null) {
+                Log.w(TAG, "Cannot create notification. Create and save channel_id firstly");
+                return null;
+            }
+            return new NotificationCompat.Builder(this, channel_id)
+                    .setContentTitle(SDL_CONTENT_TITLE)
+                    .setContentText(text)
+                    .setOnlyAlertOnce(true) // so when data is updated don't make sound and alert in android 8.0+
+                    .setOngoing(true)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentIntent(contentIntent)
+                    .build();
+        } else {
+            return new NotificationCompat.Builder(this)
+                    .setContentTitle(SDL_CONTENT_TITLE)
+                    .setContentText(text)
+                    .setOngoing(true)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentIntent(contentIntent)
+                    .build();
+        }
     }
 
-    @SuppressLint("NewApi")
-    public void enterForeground() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (notificationManager != null) {
-                if (channel_id == null) {
-                    NotificationChannel channel = new NotificationChannel(APP_ID, SERVICE_NAME, NotificationManager.IMPORTANCE_DEFAULT);
-                    notificationManager.createNotificationChannel(channel);
-                    channel_id = channel.getId();
-                }
+    private void enterForeground() {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager == null) {
+            Log.w(TAG, "NotificationManager are not available. Notification skipped.");
+            return;
+        }
+        final String text = "SDL core is starting...";
 
-                startForeground(FOREGROUND_SERVICE_ID, getServiceNotification("SDL core is starting..."));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (channel_id == null) {
+                NotificationChannel channel = new NotificationChannel(APP_ID, SERVICE_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+                notificationManager.createNotificationChannel(channel);
+                channel_id = channel.getId();
             }
+
+            startForeground(FOREGROUND_SERVICE_ID, getServiceNotification(text));
+        } else {
+            updateServiceNotification(text);
+        }
+    }
+
+    private void exitForeground() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            stopForeground(true);
+        } else {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager == null) {
+                Log.w(TAG, "NotificationManager are not available. Notification cannot be canceled.");
+                return;
+            }
+            notificationManager.cancel(FOREGROUND_SERVICE_ID);
         }
     }
 
