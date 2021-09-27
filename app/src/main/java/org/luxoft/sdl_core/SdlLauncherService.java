@@ -11,11 +11,14 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
 public class SdlLauncherService extends Service {
+
+    public final static String TAG = SdlLauncherService.class.getSimpleName();
 
     public final static String ACTION_SDL_SERVICE_START = "ACTION_SDL_SERVICE_START";
     public final static String ACTION_SDL_SERVICE_STOP = "ACTION_SDL_SERVICE_STOP";
@@ -59,12 +62,19 @@ public class SdlLauncherService extends Service {
 
         if (action.equals(ACTION_SDL_SERVICE_STOP)) {
             stopSdlThread();
-            stopForeground(true);
             stopSelfResult(startId);
             return START_NOT_STICKY;
         }
 
         return super.onStartCommand(intent, flags, startId);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            stopForeground(true);
+        }
+        super.onDestroy();
     }
 
     private boolean startSdlThread() {
@@ -135,6 +145,10 @@ public class SdlLauncherService extends Service {
 
     private void updateServiceNotification(String text) {
         Notification notification = getServiceNotification(text);
+        if (notification == null) {
+            Log.w(TAG, "Cannot update notification. Channel_id is: " + channel_id);
+            return;
+        }
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(FOREGROUND_SERVICE_ID, notification);
@@ -161,15 +175,17 @@ public class SdlLauncherService extends Service {
 
     @SuppressLint("NewApi")
     public void enterForeground() {
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (notificationManager != null) {
-            if (channel_id == null) {
-                NotificationChannel channel = new NotificationChannel(APP_ID, SERVICE_NAME, NotificationManager.IMPORTANCE_DEFAULT);
-                notificationManager.createNotificationChannel(channel);
-                channel_id = channel.getId();
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                if (channel_id == null) {
+                    NotificationChannel channel = new NotificationChannel(APP_ID, SERVICE_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+                    notificationManager.createNotificationChannel(channel);
+                    channel_id = channel.getId();
+                }
 
-            startForeground(FOREGROUND_SERVICE_ID, getServiceNotification("SDL core is starting..."));
+                startForeground(FOREGROUND_SERVICE_ID, getServiceNotification("SDL core is starting..."));
+            }
         }
     }
 
