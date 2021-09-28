@@ -4,7 +4,6 @@ import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
 import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
 import static org.luxoft.sdl_core.BleCentralService.ON_BLE_SCAN_STARTED;
-import static org.luxoft.sdl_core.SdlLauncherService.IS_SDL_SERVICE_THREAD_ALIVE;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
 
@@ -68,10 +67,8 @@ public class MainActivity extends AppCompatActivity {
         start_sdl_button = findViewById(R.id.start_sdl_button);
         stop_sdl_button = findViewById(R.id.stop_sdl_button);
 
-        Intent intent = getIntent();
-        boolean isSdlThreadAlive = intent != null && intent.getBooleanExtra(IS_SDL_SERVICE_THREAD_ALIVE, false);
-        start_sdl_button.setEnabled(!isSdlThreadAlive);
-        stop_sdl_button.setEnabled(isSdlThreadAlive);
+        start_sdl_button.setEnabled(true);
+        stop_sdl_button.setEnabled(false);
 
         start_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -117,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        if (savedInstanceState == null && !isSdlThreadAlive) {
+        if (savedInstanceState == null) {
             initBT();
         }
         if (isBleSupported() && isBluetoothPermissionGranted()) {
