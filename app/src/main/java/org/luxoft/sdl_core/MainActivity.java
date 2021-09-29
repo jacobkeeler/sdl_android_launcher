@@ -77,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
                 stop_sdl_button.setEnabled(false);
                 Intent start_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 start_intent.setAction(ACTION_SDL_SERVICE_START);
-                startService(start_intent);
+                AndroidTool.startService(MainActivity.this, start_intent);
 
                 if (isBleSupported() && isBluetoothPermissionGranted()) {
                     final Intent intent = new Intent(ACTION_START_BLE);
@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
               
                 Intent stop_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 stop_intent.setAction(ACTION_SDL_SERVICE_STOP);
-                startService(stop_intent);
+                AndroidTool.startService(MainActivity.this, stop_intent);
             }
         });
 
