@@ -300,6 +300,11 @@ public class ClassicBtHandler {
         return null;
     }
 
+    public void writeMessage(byte[] message){
+        mConnectedThread.write(message);
+    }
+
+
     /**
      * This thread runs during a connection with a remote device.
      * It handles all incoming and outgoing transmissions.
@@ -361,10 +366,6 @@ public class ClassicBtHandler {
         public void write(byte[] buffer) {
             try {
                 mmOutStream.write(buffer);
-
-                // Share the sent message back to the UI Activity
-                //mHandler.obtainMessage(Constants.MESSAGE_WRITE, -1, -1, buffer)
-                       // .sendToTarget();
             } catch (IOException e) {
                 Log.e(TAG, "Exception during write", e);
             }
@@ -451,10 +452,6 @@ public class ClassicBtHandler {
                 Log.e(TAG, "Socket close() of server failed", e);
             }
         }
-    }
-
-    public void writeMessage(byte[] message){
-
     }
 
 }
