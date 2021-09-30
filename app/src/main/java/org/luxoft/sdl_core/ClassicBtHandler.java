@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.LocalSocketAddress;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -16,7 +17,9 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.luxoft.sdl_core.BluetoothBleContract.PARAMS;
 import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ACTION;
@@ -36,8 +39,6 @@ public class ClassicBtHandler {
     private ConnectedThread mConnectedThread;
     private AcceptThread mAcceptThread;
     private int mState;
-    private final BluetoothLongReader mLongReader = new BluetoothLongReader();
-    private final BluetoothLongWriter mLongWriter = new BluetoothLongWriter();
 
     // Name for the SDP record when creating server socket
     private static final String SERVICE_NAME = "SdlProxy";
@@ -67,16 +68,6 @@ public class ClassicBtHandler {
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         context.registerReceiver(mReceiver, filter);
         mState = STATE_NONE;
-        mLongReader.setMtu(1024); //tmp for now
-
-        mLongReader.setCallback(new BluetoothLongReader.LongReaderCallback() {
-            @Override
-            public void OnLongMessageReceived(byte[] message) {
-                final Intent intent = new Intent(ON_MOBILE_MESSAGE_RECEIVED);
-                intent.putExtra(MOBILE_DATA_EXTRA, message);
-                ClassicBtHandler.this.context.sendBroadcast(intent);
-            }
-        });
     }
 
     public void DoDiscovery() {
@@ -156,7 +147,7 @@ public class ClassicBtHandler {
             // Get a BluetoothSocket for a connection with the
             // given BluetoothDevice
             try {
-                tmp = device.createInsecureRfcommSocketToServiceRecord(SDL_UUID);
+                tmp = device.createRfcommSocketToServiceRecord(SDL_UUID);
             } catch (IOException e) {
                 Log.e(TAG, "Socket create() failed", e);
             }
@@ -171,7 +162,8 @@ public class ClassicBtHandler {
             mBtAdapter.cancelDiscovery();
 
             // Make a connection to the BluetoothSocket
-            try {
+            TryToConnect();
+            /*try {
                 // This is a blocking call and will only return on a
                 // successful connection or an exception
                 mmSocket.connect();
@@ -183,11 +175,15 @@ public class ClassicBtHandler {
                     Log.e(TAG, "unable to close()" +
                             " socket during connection failure", e2);
                 }
-            }
+            }*/
                 //connectionFailed();
                 //return;*/
             //}
-
+            if(mmSocket.isConnected()){
+                Log.i(TAG, "Yana!!! Socket is connected");
+            }else{
+                Log.i(TAG, "Yana!!! Socket not  connected");
+            }
             // Reset the ConnectThread because we're done
             synchronized (ClassicBtHandler.this) {
                 mConnectThread = null;
@@ -196,6 +192,40 @@ public class ClassicBtHandler {
             Log.d(TAG, "Start the connected thread!!!");
             // Start the connected thread
             connected(mmSocket, mmDevice);
+        }
+
+        void TryToConnect() {
+            final int connect_attempts = 5;
+            final int attempt_interval_ms = 2000;
+
+            for (int i = 0; i < connect_attempts; ++i) {
+                Log.d(TAG,"Attempt #" + (i + 1) + " to connect to socket...");
+
+                try {
+                    mmSocket.connect();
+                } catch (IOException e) {
+                    /*try {
+                        mmSocket.close();
+                    } catch (IOException e2) {
+                        Log.e(TAG, "unable to close()" +
+                                " socket during connection failure", e2);*/
+                    }
+
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(attempt_interval_ms);
+                    } catch (InterruptedException interruptedException) {
+                        break;
+                    }
+
+                    continue;
+                }
+
+                //Log.d(TAG, "Successfully connected to socket");
+                //return true;
+            //}
+
+            /*Log.e(TAG, "Connection attempts exceeded. Can't connect to socket");
+            return false;*/
         }
 
         public void cancel() {
@@ -308,7 +338,13 @@ public class ClassicBtHandler {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
-                    mLongReader.processReadOperation(buffer);
+                    Log.i(TAG, "Received " + bytes + "from classic BT device");
+
+                    byte[] message = Arrays.copyOfRange(buffer, 0, bytes);
+                    final Intent intent = new Intent(ON_MOBILE_MESSAGE_RECEIVED);
+                    intent.putExtra(MOBILE_DATA_EXTRA, message);
+                    context.sendBroadcast(intent);
+
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
                     //connectionLost();
@@ -357,7 +393,7 @@ public class ClassicBtHandler {
 
             // Create a new listening server socket
             try {
-                tmp = mBtAdapter.listenUsingInsecureRfcommWithServiceRecord(
+                tmp = mBtAdapter.listenUsingRfcommWithServiceRecord(
                         SERVICE_NAME, SDL_UUID);
             } catch (IOException e) {
                 Log.e(TAG, "Socket listen() failed", e);
@@ -418,7 +454,7 @@ public class ClassicBtHandler {
     }
 
     public void writeMessage(byte[] message){
-        mLongWriter.processWriteOperation(message);
+
     }
 
 }
