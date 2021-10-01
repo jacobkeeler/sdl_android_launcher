@@ -15,7 +15,7 @@ public class LocalSocketReceiver implements IpcReceiver {
     private InputStream mInputStream;
 
     private final Object mCallbackLock = new Object();
-    private BleAdapterMessageCallback mCallback = null;
+    private WriteMessageCallback mCallback = null;
     private Thread mLoopTread;
 
     public static final int mBufferSize = 131072; // Copied from SDL INI file
@@ -83,7 +83,7 @@ public class LocalSocketReceiver implements IpcReceiver {
     };
 
     @Override
-    public void Read(BleAdapterMessageCallback callback){
+    public void Read(WriteMessageCallback callback){
         Log.i(TAG, "Going to read message");
         synchronized (mCallbackLock) {
             mCallback = callback;

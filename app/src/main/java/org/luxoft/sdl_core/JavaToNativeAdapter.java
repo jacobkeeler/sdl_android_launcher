@@ -19,20 +19,19 @@ public class JavaToNativeAdapter extends Thread {
     private static final int CONNECT_READER_ID = 5;
     private static final int CONNECT_WRITER_ID = 6;
     private static final int DISCONNECT_ID = 7;
-    public static final String CONTROL_SOCKET_ADDRESS = "./localBleControl";
-
 
     Handler mHandler;
     IpcSender mWriter;
     IpcSender mControlWriter;
     IpcReceiver mReader;
-    BleAdapterMessageCallback mCallback;
+    WriteMessageCallback mCallback;
     private final Context mContext;
 
-    JavaToNativeAdapter(Context context, String sender_socket_address, String receiver_socket_address){
-        mControlWriter = new LocalSocketSender(CONTROL_SOCKET_ADDRESS);
+    JavaToNativeAdapter(Context context, String sender_socket_address, String receiver_socket_address,
+                        String control_receiver_socket_address){
         mWriter = new LocalSocketSender(sender_socket_address);
         mReader = new LocalSocketReceiver(receiver_socket_address);
+        mControlWriter = new LocalSocketSender(control_receiver_socket_address);
         mContext = context;
     }
 
@@ -55,7 +54,7 @@ public class JavaToNativeAdapter extends Thread {
         mHandler.sendMessage(message);
     }
 
-    public void ReadMessageFromNative(BleAdapterMessageCallback callback){
+    public void ReadMessageFromNative(WriteMessageCallback callback){
         Log.i(TAG, "Save callback to read message from native");
         mCallback = callback;
         Message message = mHandler.obtainMessage(READ_ID, mCallback);
@@ -79,7 +78,7 @@ public class JavaToNativeAdapter extends Thread {
                         mWriter.Write((byte[]) msg.obj);
                         break;
                     case READ_ID:
-                        mReader.Read((BleAdapterMessageCallback) msg.obj);
+                        mReader.Read((WriteMessageCallback) msg.obj);
                         break;
                     case WRITE_CONTROL_ID:
                         mControlWriter.Write((byte[]) msg.obj);

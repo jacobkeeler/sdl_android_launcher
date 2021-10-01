@@ -2,13 +2,11 @@ package org.luxoft.sdl_core;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.LocalSocketAddress;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -21,10 +19,10 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAMS;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ACTION;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ADDRESS;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_NAME;
+import static org.luxoft.sdl_core.TransportContract.PARAMS;
+import static org.luxoft.sdl_core.TransportContract.PARAM_ACTION;
+import static org.luxoft.sdl_core.TransportContract.PARAM_ADDRESS;
+import static org.luxoft.sdl_core.TransportContract.PARAM_NAME;
 import static org.luxoft.sdl_core.CommunicationService.MOBILE_CONTROL_DATA_EXTRA;
 import static org.luxoft.sdl_core.CommunicationService.MOBILE_DATA_EXTRA;
 import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
@@ -37,11 +35,7 @@ public class ClassicBtHandler {
     private BluetoothAdapter mBtAdapter = BluetoothAdapter.getDefaultAdapter();
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
-    private AcceptThread mAcceptThread;
     private int mState;
-
-    // Name for the SDP record when creating server socket
-    private static final String SERVICE_NAME = "SdlProxy";
 
     // Unique UUID for this application
     private static final UUID SDL_UUID =
@@ -259,11 +253,6 @@ public class ClassicBtHandler {
             mConnectedThread = null;
         }
 
-        // Cancel the accept thread because we only want to connect to one device
-        if (mAcceptThread != null) {
-            mAcceptThread.cancel();
-            mAcceptThread = null;
-        }
 
         // Start the thread to manage the connection and perform transmissions
         mConnectedThread = new ConnectedThread(socket);
@@ -379,79 +368,4 @@ public class ClassicBtHandler {
             }
         }
     }
-
-    /**
-     * This thread runs while listening for incoming connections. It behaves
-     * like a server-side client. It runs until a connection is accepted
-     * (or until cancelled).
-     */
-    private class AcceptThread extends Thread {
-        // The local server socket
-        private final BluetoothServerSocket mmServerSocket;
-
-        public AcceptThread() {
-            BluetoothServerSocket tmp = null;
-
-            // Create a new listening server socket
-            try {
-                tmp = mBtAdapter.listenUsingRfcommWithServiceRecord(
-                        SERVICE_NAME, SDL_UUID);
-            } catch (IOException e) {
-                Log.e(TAG, "Socket listen() failed", e);
-            }
-            mmServerSocket = tmp;
-            mState = STATE_LISTEN;
-        }
-
-        public void run() {
-            Log.d(TAG, "Socket BEGIN mAcceptThread");
-            BluetoothSocket socket;
-
-            // Listen to the server socket if we're not connected
-            while (mState != STATE_CONNECTED) {
-                try {
-                    // This is a blocking call and will only return on a
-                    // successful connection or an exception
-                    socket = mmServerSocket.accept();
-                } catch (IOException e) {
-                    Log.e(TAG, "Socket accept() failed", e);
-                    break;
-                }
-
-                // If a connection was accepted
-                if (socket != null) {
-                    synchronized (ClassicBtHandler.this) {
-                        switch (mState) {
-                            case STATE_LISTEN:
-                            case STATE_CONNECTING:
-                                // Situation normal. Start the connected thread.
-                                connected(socket, socket.getRemoteDevice());
-                                break;
-                            case STATE_NONE:
-                            case STATE_CONNECTED:
-                                // Either not ready or already connected. Terminate new socket.
-                                try {
-                                    socket.close();
-                                } catch (IOException e) {
-                                    Log.e(TAG, "Could not close unwanted socket", e);
-                                }
-                                break;
-                        }
-                    }
-                }
-            }
-            Log.i(TAG, "END mAcceptThread");
-
-        }
-
-        public void cancel() {
-            Log.d(TAG, "Socket cancel");
-            try {
-                mmServerSocket.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Socket close() of server failed", e);
-            }
-        }
-    }
-
 }

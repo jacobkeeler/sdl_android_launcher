@@ -29,10 +29,10 @@ import static org.luxoft.sdl_core.CommunicationService.ON_PERIPHERAL_READY;
 import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
 import static org.luxoft.sdl_core.CommunicationService.MOBILE_CONTROL_DATA_EXTRA;
 
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ACTION;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_NAME;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ADDRESS;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAMS;
+import static org.luxoft.sdl_core.TransportContract.PARAM_ACTION;
+import static org.luxoft.sdl_core.TransportContract.PARAM_NAME;
+import static org.luxoft.sdl_core.TransportContract.PARAM_ADDRESS;
+import static org.luxoft.sdl_core.TransportContract.PARAMS;
 
 class BleHandler {
     public BluetoothCentralManager central;

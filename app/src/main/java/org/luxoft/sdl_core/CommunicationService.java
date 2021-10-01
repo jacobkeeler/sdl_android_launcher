@@ -27,10 +27,11 @@ public class CommunicationService extends Service {
 
         public final static String BLE_RECEIVER_SOCKET_ADDRESS = "./localBleReader";
         public final static String BLE_SENDER_SOCKET_ADDRESS = "./localBleWriter";
+        public final static String BLE_CONTROL_RECEIVER_SOCKET_ADDRESS = "./localBleControl";
 
-        //temporary adresses
-        public final static String BT_RECEIVER_SOCKET_ADDRESS = "./localBleReader";
-        public final static String BT_SENDER_SOCKET_ADDRESS = "./localBleWriter";
+        public final static String BT_RECEIVER_SOCKET_ADDRESS = "./localBtReader";
+        public final static String BT_SENDER_SOCKET_ADDRESS = "./localBtWriter";
+        public final static String BT_CONTROL_RECEIVER_SOCKET_ADDRESS = "./localBtControl";
 
         public enum TransportType {
         BLE,
@@ -40,7 +41,7 @@ public class CommunicationService extends Service {
         BleHandler mBleHandler;
         ClassicBtHandler mClassicBtHandler;
         JavaToNativeAdapter mNativeAdapterThread;
-        BleAdapterMessageCallback mCallback;
+        WriteMessageCallback mCallback;
         TransportType mCurrentTransport;
 
         @Override
@@ -87,7 +88,8 @@ public class CommunicationService extends Service {
                         Log.i(TAG, "ACTION_START_BLE received by communicationServiceReceiver");
                         mCurrentTransport = TransportType.BLE;
                         mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
-                                BLE_SENDER_SOCKET_ADDRESS, BLE_RECEIVER_SOCKET_ADDRESS);
+                                BLE_SENDER_SOCKET_ADDRESS, BLE_RECEIVER_SOCKET_ADDRESS,
+                                BLE_CONTROL_RECEIVER_SOCKET_ADDRESS);
                         mNativeAdapterThread.start();
                         break;
 
@@ -95,7 +97,8 @@ public class CommunicationService extends Service {
                         Log.i(TAG, "ACTION_START_BT received by communicationServiceReceiver");
                         mCurrentTransport = TransportType.CLASSIC_BT;
                         mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
-                                BT_SENDER_SOCKET_ADDRESS, BT_RECEIVER_SOCKET_ADDRESS);
+                                BT_SENDER_SOCKET_ADDRESS, BT_RECEIVER_SOCKET_ADDRESS,
+                                BT_CONTROL_RECEIVER_SOCKET_ADDRESS);
                         mNativeAdapterThread.start();
                         break;
 
@@ -209,13 +212,13 @@ public class CommunicationService extends Service {
         return intentFilter;
     }
 
-    class BleAdapterWriteMessageCallback implements BleAdapterMessageCallback {
+    class BleAdapterWriteMessageCallback implements WriteMessageCallback {
         public void OnMessageReceived(byte[] rawMessage) {
             mBleHandler.writeMessage(rawMessage);
         }
     };
 
-    class BtAdapterWriteMessageCallback implements BleAdapterMessageCallback {
+    class BtAdapterWriteMessageCallback implements WriteMessageCallback {
         public void OnMessageReceived(byte[] rawMessage) {
             mClassicBtHandler.writeMessage(rawMessage);
         }
