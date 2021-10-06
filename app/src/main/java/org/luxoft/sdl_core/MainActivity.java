@@ -1,9 +1,9 @@
 package org.luxoft.sdl_core;
 
+import static org.luxoft.sdl_core.CommunicationService.ACTION_DISCONNECT_FROM_NATIVE;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BLE;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BT;
-import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_BLE;
-import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_BT;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_TRANSPORT;
 import static org.luxoft.sdl_core.CommunicationService.ON_BLE_SCAN_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
@@ -83,11 +83,8 @@ public class MainActivity extends AppCompatActivity {
         stop_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (isBleSupported() && isBluetoothPermissionGranted()) {
-                    final Intent intent = new Intent(ACTION_STOP_BLE);
-                    sendBroadcast(intent);
-                }
-              
+                final Intent disconnect_intent = new Intent(ACTION_DISCONNECT_FROM_NATIVE);
+                sendBroadcast(disconnect_intent);
                 Intent stop_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 stop_intent.setAction(ACTION_SDL_SERVICE_STOP);
                 AndroidTool.startService(MainActivity.this, stop_intent);
@@ -110,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
                 }else if(buttonText.equals("Stop BT")){
                     start_ble_button.setEnabled(true);
                     start_bt_button.setText("Start BT");
-                    final Intent intent = new Intent(ACTION_STOP_BLE);
+                    final Intent intent = new Intent(ACTION_STOP_TRANSPORT);
                     sendBroadcast(intent);
                 }
             }
@@ -132,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 }else if(buttonText.equals("Stop BLE")){
                     start_bt_button.setEnabled(true);
                     start_ble_button.setText("Start BLE");
-                    final Intent intent = new Intent(ACTION_STOP_BT);
+                    final Intent intent = new Intent(ACTION_STOP_TRANSPORT);
                     sendBroadcast(intent);
                 }
             }
@@ -482,7 +479,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
 
                 case ON_BLE_SCAN_STARTED:
-                    showToastMessage("Scanning for a BLE devices nearby...");
+                    showToastMessage("Scanning for devices nearby...");
                     break;
             }
         }

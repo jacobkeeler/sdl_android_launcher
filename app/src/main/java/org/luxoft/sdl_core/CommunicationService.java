@@ -11,8 +11,10 @@ import android.util.Log;
 public class CommunicationService extends Service {
         public static final String TAG = CommunicationService.class.getSimpleName();
         public final static String ACTION_START_BLE = "ACTION_START_BLE";
-        public final static String ACTION_SCAN_BLE = "ACTION_SCAN_BLE";
-        public final static String ACTION_STOP_BLE = "ACTION_STOP_BLE";
+        public final static String ACTION_START_BT ="ACTION_START_BT";
+        public final static String ACTION_STOP_TRANSPORT = "ACTION_STOP_TRANSPORT";
+        public final static String ACTION_DISCONNECT_FROM_NATIVE = "ACTION_DISCONNECT_FROM_NATIVE";
+        public final static String ACTION_SCAN = "ACTION_SCAN_BLE";
         public final static String ON_PERIPHERAL_READY = "ON_PERIPHERAL_READY";
         public final static String ON_BLE_SCAN_STARTED = "ON_BLE_SCAN_STARTED";
         public final static String ON_NATIVE_READY = "ON_NATIVE_READY";
@@ -22,8 +24,6 @@ public class CommunicationService extends Service {
         public final static String MOBILE_CONTROL_DATA_EXTRA = "MOBILE_CONTROL_DATA_EXTRA";
         public final static String MOBILE_DEVICE_DISCONNECTED_EXTRA = "MOBILE_DEVICE_DISCONNECTED_EXTRA";
         public final static String ON_MOBILE_CONTROL_MESSAGE_RECEIVED = "ON_MOBILE_CONTROL_MESSAGE_RECEIVED";
-        public final static String ACTION_START_BT ="ACTION_START_BT";
-        public final static String ACTION_STOP_BT ="ACTION_STOP_BT";
 
         public final static String BLE_RECEIVER_SOCKET_ADDRESS = "./localBleReader";
         public final static String BLE_SENDER_SOCKET_ADDRESS = "./localBleWriter";
@@ -102,19 +102,40 @@ public class CommunicationService extends Service {
                         mNativeAdapterThread.start();
                         break;
 
-                    /*case ACTION_SCAN_BLE:
-                        Log.i(TAG, "ACTION_SCAN_BLE received by communicationServiceReceiver");
-                        if (mBleHandler != null) {
-                            mBleHandler.connect();
+                    case ACTION_SCAN:
+                        Log.i(TAG, "ACTION_SCAN received by communicationServiceReceiver");
+                        switch (mCurrentTransport) {
+                            case BLE:
+                                mBleHandler.connect();
+                                break;
+
+                            case CLASSIC_BT:
+                                mClassicBtHandler.DoDiscovery();
+                                break;
                         }
 
                         final Intent scan_started_intent = new Intent(ON_BLE_SCAN_STARTED);
                         context.sendBroadcast(scan_started_intent);
-                        break;*/
 
-                    case ACTION_STOP_BLE:
-                        Log.i(TAG, "ACTION_STOP_BLE received by communicationServiceReceiver");
-                        mBleHandler.disconnect();
+                        break;
+
+                    case ACTION_STOP_TRANSPORT:
+                        Log.i(TAG, "ACTION_STOP received by communicationServiceReceiver");
+
+                        switch (mCurrentTransport) {
+                            case BLE:
+                                mBleHandler.disconnect();
+                                break;
+
+                            case CLASSIC_BT:
+                                mClassicBtHandler.disconnect();
+                                break;
+                        }
+
+                        break;
+
+                    case ACTION_DISCONNECT_FROM_NATIVE:
+                        Log.i(TAG, "ACTION_DISCONNECT_FROM_NATIVE received by communicationServiceReceiver");
 
                         try {
                             mNativeAdapterThread.setStopThread();
@@ -152,12 +173,14 @@ public class CommunicationService extends Service {
                         switch (mCurrentTransport) {
                             case BLE:
                                 initBleHandler();
-                                mBleHandler.connect();
+                                final Intent scan_ble = new Intent(ACTION_SCAN);
+                                context.sendBroadcast(scan_ble);
                                 break;
 
                             case CLASSIC_BT:
                                 initClassicBTHandler();
-                                mClassicBtHandler.DoDiscovery();
+                                final Intent scan_bt = new Intent(ACTION_SCAN);
+                                context.sendBroadcast(scan_bt);
                                 break;
                         }
                         break;
@@ -201,14 +224,14 @@ public class CommunicationService extends Service {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_START_BLE);
         intentFilter.addAction(ACTION_START_BT);
-        intentFilter.addAction(ACTION_SCAN_BLE);
-        intentFilter.addAction(ACTION_STOP_BLE);
-        intentFilter.addAction(ACTION_STOP_BT);
+        intentFilter.addAction(ACTION_STOP_TRANSPORT);
+        intentFilter.addAction(ACTION_SCAN);
         intentFilter.addAction(ON_NATIVE_READY);
         intentFilter.addAction(ON_NATIVE_CONTROL_READY);
         intentFilter.addAction(ON_PERIPHERAL_READY);
         intentFilter.addAction(ON_MOBILE_MESSAGE_RECEIVED);
         intentFilter.addAction(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
+        intentFilter.addAction(ACTION_DISCONNECT_FROM_NATIVE);
         return intentFilter;
     }
 

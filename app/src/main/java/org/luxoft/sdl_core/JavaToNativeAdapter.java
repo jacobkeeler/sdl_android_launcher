@@ -87,7 +87,7 @@ public class JavaToNativeAdapter extends Thread {
                         mReader.Connect(new OnConnectCallback() {
                             @Override
                             public void Execute() {
-                                Log.i(TAG, "BLE reader is connected");
+                                Log.i(TAG, "Reader is connected");
                                 Message message = mHandler.obtainMessage(CONNECT_WRITER_ID);
                                 mHandler.sendMessage(message);
                             }

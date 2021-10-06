@@ -21,7 +21,7 @@ import org.json.JSONObject;
 import java.util.UUID;
 
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE;
-import static org.luxoft.sdl_core.CommunicationService.ACTION_SCAN_BLE;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_SCAN;
 import static org.luxoft.sdl_core.CommunicationService.MOBILE_DATA_EXTRA;
 import static org.luxoft.sdl_core.CommunicationService.MOBILE_DEVICE_DISCONNECTED_EXTRA;
 import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_MESSAGE_RECEIVED;
@@ -166,21 +166,19 @@ class BleHandler {
         public void onDisconnectedPeripheral(final BluetoothPeripheral peripheral, final HciStatus status) {
             Log.d(TAG, "Disconnected from " + peripheral.getName());
 
+            String ctrl_msg = GenerateDisconnectMessage(peripheral);
+            if(ctrl_msg != null) {
+                final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
+                intent.putExtra(MOBILE_CONTROL_DATA_EXTRA, ctrl_msg.getBytes());
+                intent.putExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, true);
+                context.sendBroadcast(intent);
+            }
+            mLongReader.resetBuffer();
+            mLongWriter.resetBuffer();
+
             if (mPeripheral != null && peripheral.getAddress().equals(mPeripheral.getAddress())) {
-
-                String ctrl_msg = GenerateDisconnectMessage(peripheral);
-                if(ctrl_msg != null) {
-                    final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
-                    intent.putExtra(MOBILE_CONTROL_DATA_EXTRA, ctrl_msg.getBytes());
-                    intent.putExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, true);
-                    context.sendBroadcast(intent);
-                }
-
-                mLongReader.resetBuffer();
-                mLongWriter.resetBuffer();
-
                 // Restart devices scanning
-                final Intent scan_ble = new Intent(ACTION_SCAN_BLE);
+                final Intent scan_ble = new Intent(ACTION_SCAN);
                 context.sendBroadcast(scan_ble);
             }
         }
@@ -230,7 +228,7 @@ class BleHandler {
     }
 
     public void disconnect() {
-        Log.d(TAG, "Closing bluetooth handler...");
+        Log.d(TAG, "Closing BLE handler...");
         handler.removeCallbacksAndMessages(null);
         if (central != null) {
             if (mPeripheral != null) {

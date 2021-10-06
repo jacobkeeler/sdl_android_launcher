@@ -18,7 +18,7 @@ public class LocalSocketSender implements IpcSender{
 
     @Override
     public void Connect(OnConnectCallback callback){
-        Log.i(TAG, "Connect BleLocalSocketWriter");
+        Log.i(TAG, "Connect LocalSocketSender");
         mSocket = new LocalSocket();
         if (!TryToConnect()) {
             Log.e(TAG, "Cannot connect to socket");
@@ -60,7 +60,7 @@ public class LocalSocketSender implements IpcSender{
 
     @Override
     public void Disconnect(){
-        Log.i(TAG, "Disconnect BleLocalSocketWriter");
+        Log.i(TAG, "Disconnect LocalSocketSender");
         try {
             if(mSocket != null) {
                 mSocket.getOutputStream().close();
