@@ -19,6 +19,8 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.luxoft.sdl_core.CommunicationService.ACTION_SCAN;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_DEVICE_DISCONNECTED_EXTRA;
 import static org.luxoft.sdl_core.TransportContract.PARAMS;
 import static org.luxoft.sdl_core.TransportContract.PARAM_ACTION;
 import static org.luxoft.sdl_core.TransportContract.PARAM_ADDRESS;
@@ -35,6 +37,7 @@ public class ClassicBtHandler {
     private BluetoothAdapter mBtAdapter = BluetoothAdapter.getDefaultAdapter();
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
+    private BluetoothDevice mConnectedDevice = null;
     private int mState;
 
     // Unique UUID for this application
@@ -76,8 +79,38 @@ public class ClassicBtHandler {
     }
 
     public void disconnect() {
-        Log.d(TAG, "Closing bluetooth handler...");
+        Log.d(TAG, "Disconnected from " + mConnectedDevice.getName());
+
+        if(mConnectedDevice != null) {
+            String ctrl_msg = GenerateDisconnectMessage(mConnectedDevice);
+            if(ctrl_msg != null) {
+                final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
+                intent.putExtra(MOBILE_CONTROL_DATA_EXTRA, ctrl_msg.getBytes());
+                intent.putExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, true);
+                context.sendBroadcast(intent);
+            }
+        }
+        mConnectedDevice = null;
         context.unregisterReceiver(mReceiver);
+        mState = STATE_NONE;
+
+        if (mConnectThread != null) {
+            mConnectThread.cancel();
+            mConnectThread = null;
+        }
+
+        if (mConnectedThread != null) {
+            mConnectedThread.cancel();
+            mConnectedThread = null;
+        }
+    }
+
+    public void retryConnection() {
+        disconnect();
+
+        // Restart devices scanning
+        final Intent scan_ble = new Intent(ACTION_SCAN);
+        context.sendBroadcast(scan_ble);
     }
 
     /**
@@ -132,10 +165,9 @@ public class ClassicBtHandler {
      */
     private class ConnectThread extends Thread {
         private final BluetoothSocket mmSocket;
-        private final BluetoothDevice mmDevice;
 
         public ConnectThread(BluetoothDevice device) {
-            mmDevice = device;
+            mConnectedDevice = device;
             BluetoothSocket tmp = null;
 
             // Get a BluetoothSocket for a connection with the
@@ -173,19 +205,14 @@ public class ClassicBtHandler {
                 //connectionFailed();
                 //return;*/
             //}
-            if(mmSocket.isConnected()){
-                Log.i(TAG, "Yana!!! Socket is connected");
-            }else{
-                Log.i(TAG, "Yana!!! Socket not  connected");
-            }
-            // Reset the ConnectThread because we're done
+                        // Reset the ConnectThread because we're done
             synchronized (ClassicBtHandler.this) {
                 mConnectThread = null;
             }
 
             Log.d(TAG, "Start the connected thread!!!");
             // Start the connected thread
-            connected(mmSocket, mmDevice);
+            connected(mmSocket);
         }
 
         void TryToConnect() {
@@ -235,10 +262,8 @@ public class ClassicBtHandler {
      * Start the ConnectedThread to begin managing a Bluetooth connection
      *
      * @param socket The BluetoothSocket on which the connection was made
-     * @param device The BluetoothDevice that has been connected
      */
-    public synchronized void connected(BluetoothSocket socket, BluetoothDevice
-            device) {
+    public synchronized void connected(BluetoothSocket socket) {
         Log.d(TAG, "connected to Socket");
 
         // Cancel the thread that completed the connection
@@ -257,7 +282,7 @@ public class ClassicBtHandler {
         // Start the thread to manage the connection and perform transmissions
         mConnectedThread = new ConnectedThread(socket);
 
-        String ctrl_msg = GenerateConnectedMessage(device);
+        String ctrl_msg = GenerateConnectedMessage(mConnectedDevice);
         if(ctrl_msg != null) {
             final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
             intent.putExtra(MOBILE_CONTROL_DATA_EXTRA, ctrl_msg.getBytes());
@@ -266,14 +291,12 @@ public class ClassicBtHandler {
 
         final Intent intent = new Intent(ON_PERIPHERAL_READY);
         context.sendBroadcast(intent);
-
-        //mConnectedThread.start();
-
     }
 
     public void start_connected_thread(){
         mConnectedThread.start();
     }
+
     private String GenerateConnectedMessage(BluetoothDevice device) {
         try {
             JSONObject message = new JSONObject();
@@ -289,7 +312,26 @@ public class ClassicBtHandler {
         return null;
     }
 
+    private String GenerateDisconnectMessage(BluetoothDevice device) {
+        try {
+            JSONObject message = new JSONObject();
+            message.put(PARAM_ACTION, "ON_DEVICE_DISCONNECTED");
+            JSONObject params = new JSONObject();
+            params.put(PARAM_ADDRESS, device.getAddress());
+            message.put(PARAMS, params);
+            return message.toString();
+        } catch (JSONException ex) {
+            Log.i(TAG, "ON_DEVICE_DISCONNECTED msg Failed", ex);
+        }
+        return null;
+    }
+
     public void writeMessage(byte[] message){
+        if (mConnectedDevice == null) {
+            Log.e(TAG, "Connected device is null");
+            return;
+        }
+
         mConnectedThread.write(message);
     }
 
@@ -332,7 +374,7 @@ public class ClassicBtHandler {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
-                    Log.i(TAG, "Received " + bytes + "from classic BT device");
+                    Log.i(TAG, "Received " + bytes + " from classic BT device");
 
                     byte[] message = Arrays.copyOfRange(buffer, 0, bytes);
                     final Intent intent = new Intent(ON_MOBILE_MESSAGE_RECEIVED);
@@ -341,7 +383,7 @@ public class ClassicBtHandler {
 
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
-                    //connectionLost();
+                    retryConnection();
                     break;
                 }
             }
