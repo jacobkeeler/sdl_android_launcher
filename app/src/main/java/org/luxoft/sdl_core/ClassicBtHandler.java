@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -69,10 +70,23 @@ public class ClassicBtHandler {
 
     public void DoDiscovery() {
         Log.i(TAG, "If we're already discovering, stop it");
-        //
         if (mBtAdapter.isDiscovering()) {
             mBtAdapter.cancelDiscovery();
         }
+
+        Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
+        if (pairedDevices.size() > 0) {
+            // There are paired devices. Get the name and address of each paired device.
+            // For now assume that we can have only one paired device
+            for (BluetoothDevice device : pairedDevices) {
+                String deviceName = device.getName();
+                String deviceHardwareAddress = device.getAddress(); // MAC address
+                Log.i(TAG, "Classic BT device " + deviceName + " with address " + deviceHardwareAddress + "is already paired");
+                connect(device);
+            }
+            return;
+        }
+
         Log.i(TAG, "Request discover from BluetoothAdapter");
         // Request discover from BluetoothAdapter
         mBtAdapter.startDiscovery();
@@ -188,8 +202,8 @@ public class ClassicBtHandler {
             mBtAdapter.cancelDiscovery();
 
             // Make a connection to the BluetoothSocket
-            TryToConnect();
-            /*try {
+            //TryToConnect();
+            try {
                 // This is a blocking call and will only return on a
                 // successful connection or an exception
                 mmSocket.connect();
@@ -201,11 +215,11 @@ public class ClassicBtHandler {
                     Log.e(TAG, "unable to close()" +
                             " socket during connection failure", e2);
                 }
-            }*/
-                //connectionFailed();
-                //return;*/
-            //}
-                        // Reset the ConnectThread because we're done
+                retryConnection();
+                return;
+            }
+
+            // Reset the ConnectThread because we're done
             synchronized (ClassicBtHandler.this) {
                 mConnectThread = null;
             }
