@@ -1,10 +1,17 @@
 package org.luxoft.sdl_core;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.UriPermission;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+
+import java.util.Comparator;
+import java.util.List;
 
 public class AndroidTool {
 
@@ -24,4 +31,27 @@ public class AndroidTool {
         }
     }
 
+    /**
+     * Return last valid URI permission grants that have been persisted by the app.
+     * @param context context used to retrieve the {@link ContentResolver} content resolver.
+     * @return URI permission with write and read granted permissions. Or null if URI permission cannot be found.
+     */
+    @RequiresApi(29)
+    @Nullable
+    public static UriPermission getGrantedUriPermission(@NonNull Context context) {
+        List<UriPermission> uriPermissions = context.getContentResolver().getPersistedUriPermissions();
+        if (uriPermissions.isEmpty()) {
+            return null;
+        }
+
+        if (uriPermissions.size() == 1) {
+            UriPermission permission = uriPermissions.get(0);
+            return permission.isReadPermission() && permission.isWritePermission() ? permission : null;
+        } else {
+            return uriPermissions.stream()
+                    .filter(uriPermission -> uriPermission.isWritePermission() && uriPermission.isReadPermission())
+                    .max(Comparator.comparingLong(UriPermission::getPersistedTime))
+                    .orElse(null);
+        }
+    }
 }

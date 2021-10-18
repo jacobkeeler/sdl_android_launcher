@@ -14,24 +14,28 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.UriPermission;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.documentfile.provider.DocumentFile;
 
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     public static String sdl_external_dir_folder_path;
     private static final int ACCESS_LOCATION_REQUEST = 1;
     private static final int ACCESS_EXT_STORAGE_REQUEST = 2;
+    private static final String SDL_FOLDER = "SDL";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -258,6 +263,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getWritableExternalDirectory() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            UriPermission uriPermission = AndroidTool.getGrantedUriPermission(this);
+            if (uriPermission != null) {
+                Uri treeUri = uriPermission.getUri();
+                DocumentFile pickedDir = DocumentFile.fromTreeUri(this, treeUri);
+                if (pickedDir != null && pickedDir.exists()) {
+                    ParcelFileDescriptor filePfd;
+
+                    if (!SDL_FOLDER.equals(pickedDir.getName())) {
+                        DocumentFile sdlDir = pickedDir.findFile(SDL_FOLDER);
+                        pickedDir = sdlDir == null ? pickedDir.createDirectory(SDL_FOLDER) : sdlDir;
+                    }
+
+                    try {
+                        filePfd = getContentResolver().openFileDescriptor(pickedDir.getUri(), "r");
+                        int fd = filePfd.getFd();
+                        Log.w(TAG, "=> fd: " + (fd));
+                        return String.valueOf(fd);
+                    } catch (FileNotFoundException e) {
+                        Log.e(TAG, "Cannot find file by Uri. " + e.getLocalizedMessage());
+                    }
+                }
+            }
+        }
+
         // Create a temporary file to see whether a volume is really writeable.
         // It's important not to put it in the root directory which may have a
         // limit on the number of files.
@@ -279,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getDefaultExternalDirectory() {
-        return getDir("SDL", 0).getPath();
+        return getDir(SDL_FOLDER, 0).getPath();
     }
 
     private String getExternalDirectory() {
@@ -314,8 +344,9 @@ public class MainActivity extends AppCompatActivity {
 
     public boolean isStoragePermissionGranted() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (PackageManager.PERMISSION_GRANTED == checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                Log.v(TAG,"Storage permission is granted");
+            UriPermission grantedUriPermission = AndroidTool.getGrantedUriPermission(this);
+            if (grantedUriPermission != null) {
+                Log.v(TAG,"Storage permission is granted: " + grantedUriPermission.toString());
                 return true;
             } else {
                 Log.v(TAG,"Storage permission is revoked");
@@ -358,20 +389,16 @@ public class MainActivity extends AppCompatActivity {
 
         if (resultCode == RESULT_OK) {
             Uri treeUri = resultData.getData();
-            DocumentFile pickedDir = DocumentFile.fromTreeUri(this, treeUri);
             grantUriPermission(getPackageName(), treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             getContentResolver().takePersistableUriPermission(treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-
-            if (pickedDir != null) {
-                  // TODO: Add support for a file operations for Anroid 10 on external storage
-            }
+            updateExternalDirField(getWritableExternalDirectory());
         }
 
         runInitializeAssetsThread();
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
             case ACCESS_LOCATION_REQUEST: {
                 if (grantResults.length > 0) {
@@ -403,6 +430,7 @@ public class MainActivity extends AppCompatActivity {
         return BluetoothAdapter.getDefaultAdapter() != null &&
                 getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
     }
+
     private void initBT() {
         if(!isBleSupported()){
             showToastMessage("BLE is NOT supported");
