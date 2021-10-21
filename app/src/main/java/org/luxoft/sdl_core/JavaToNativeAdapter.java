@@ -35,7 +35,7 @@ public class JavaToNativeAdapter extends Thread {
                         String transport_name){
         mWriter = new LocalSocketSender(sender_socket_address, transport_name);
         mReader = new LocalSocketReceiver(receiver_socket_address, transport_name);
-        mControlWriter = new LocalSocketSender(control_receiver_socket_address, transport_name);
+        mControlWriter = new LocalSocketSender(control_receiver_socket_address, transport_name + "[CTRL]");
         mContext = context;
         mTransportName = transport_name;
     }
