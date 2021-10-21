@@ -106,6 +106,21 @@ public class CommunicationService extends Service {
             return super.onStartCommand(intent, flags, startId);
         }
 
+        private String getTransportName() {
+            switch (mCurrentTransport) {
+                case BLE:
+                    return "[IPC][JAVA][BLE]";
+
+                case CLASSIC_BT:
+                    return "[IPC][JAVA][BT]";
+
+                default:
+                    Log.e(TAG, "[IPC][JAVA][Unknown]");
+                    break;
+            }
+            return "[IPC][JAVA][Unknown]";
+        }
+
         private final BroadcastReceiver communicationServiceReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
