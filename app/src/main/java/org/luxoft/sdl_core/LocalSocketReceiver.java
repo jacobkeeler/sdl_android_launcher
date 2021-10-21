@@ -20,37 +20,40 @@ public class LocalSocketReceiver implements IpcReceiver {
 
     public static final int mBufferSize = 131072; // Copied from SDL INI file
     private String mSocketName;
+    private String mTransportName;
 
-    public LocalSocketReceiver(String socket_name) {
+    public LocalSocketReceiver(String socket_name,
+                               String transport_name) {
         mSocketName = socket_name;
+        mTransportName = transport_name;
     }
 
     @Override
     public void Connect(OnConnectCallback callback){
-        Log.i(TAG, "Connect LocalSocketReceiver");
+        Log.i(TAG, "Connect LocalSocketReceiver " + mTransportName);
         try {
             mServer = new LocalServerSocket(mSocketName);
         } catch (IOException e) {
-            Log.e(TAG, "The localSocketServer creation failed");
+            Log.e(TAG, "The localSocketServer creation failed "  + mTransportName);
             e.printStackTrace();
         }
 
         try {
-            Log.d(TAG, "LocalSocketReceiver begins to accept()");
+            Log.d(TAG, "LocalSocketReceiver begins to accept() "  + mTransportName);
             mReceiver = mServer.accept();
         } catch (IOException e) {
-            Log.e(TAG, "LocalSocketReceiver accept() failed");
+            Log.e(TAG, "LocalSocketReceiver accept() failed "  + mTransportName);
             e.printStackTrace();
         }
 
         try {
             mInputStream = mReceiver.getInputStream();
         } catch (IOException e) {
-            Log.e(TAG, "getInputStream() failed");
+            Log.e(TAG, "getInputStream() failed "  + mTransportName);
             e.printStackTrace();
         }
 
-        Log.d(TAG, "The client connect to LocalSocketReceiver");
+        Log.d(TAG, "The client connect to LocalSocketReceiver "  + mTransportName);
         ReadLoop readLoop = new ReadLoop();
         mLoopTread = new Thread(readLoop);
         mLoopTread.start();
@@ -60,7 +63,7 @@ public class LocalSocketReceiver implements IpcReceiver {
 
     @Override
     public void Disconnect(){
-        Log.i(TAG, "Disconnect LocalSocketReceiver");
+        Log.i(TAG, "Disconnect LocalSocketReceiver "  + mTransportName);
 
         if (mLoopTread != null) {
             mLoopTread.interrupt();
@@ -84,7 +87,7 @@ public class LocalSocketReceiver implements IpcReceiver {
 
     @Override
     public void Read(WriteMessageCallback callback){
-        Log.i(TAG, "Going to read message");
+        Log.i(TAG, "Going to read message "  + mTransportName);
         synchronized (mCallbackLock) {
             mCallback = callback;
         }
@@ -100,17 +103,17 @@ public class LocalSocketReceiver implements IpcReceiver {
                 try {
                     mBytesRead = mInputStream.read(buffer);
                 } catch (IOException e) {
-                    Log.d(TAG, "There is an exception when reading socket");
+                    Log.d(TAG, "There is an exception when reading socket " + mTransportName);
                     e.printStackTrace();
                     break;
                 }
 
                 if (mBytesRead >= 0) {
                     Log.d(TAG, "Receive data from socket, bytesRead = "
-                            + mBytesRead);
+                            + mBytesRead + " "  + mTransportName );
                     byte[] truncated_buffer = Arrays.copyOfRange(buffer, 0, mBytesRead);
                     String stringified_data = new String(truncated_buffer);
-                    Log.d(TAG, "Receive data from socket = " + stringified_data);
+                    Log.d(TAG, "Receive data from socket = " + stringified_data + " " + mTransportName);
 
                     synchronized (mCallbackLock) {
                         if (mCallback != null) {

@@ -26,36 +26,41 @@ public class JavaToNativeAdapter extends Thread {
     IpcReceiver mReader;
     WriteMessageCallback mCallback;
     private final Context mContext;
+    String mTransportName;
 
-    JavaToNativeAdapter(Context context, String sender_socket_address, String receiver_socket_address,
-                        String control_receiver_socket_address){
-        mWriter = new LocalSocketSender(sender_socket_address);
-        mReader = new LocalSocketReceiver(receiver_socket_address);
-        mControlWriter = new LocalSocketSender(control_receiver_socket_address);
+    JavaToNativeAdapter(Context context,
+                        String sender_socket_address,
+                        String receiver_socket_address,
+                        String control_receiver_socket_address,
+                        String transport_name){
+        mWriter = new LocalSocketSender(sender_socket_address, transport_name);
+        mReader = new LocalSocketReceiver(receiver_socket_address, transport_name);
+        mControlWriter = new LocalSocketSender(control_receiver_socket_address, transport_name);
         mContext = context;
+        mTransportName = transport_name;
     }
 
     public void EstablishConnectionWithNative() {
-        Log.i(TAG, "Establishing communication with native");
+        Log.i(TAG, "Establishing communication with native " + mTransportName);
         Message message = mHandler.obtainMessage(CONNECT_READER_ID);
         mHandler.sendMessage(message);
     }
 
     public void CloseConnectionWithNative() {
-        Log.i(TAG, "Closing communication with native");
+        Log.i(TAG, "Closing communication with native " + mTransportName);
         Message message = mHandler.obtainMessage(DISCONNECT_ID);
         mHandler.sendMessage(message);
     }
 
     public void ForwardMessageToNative(byte[] rawMessage){
         String stringified_message = new String(rawMessage);
-        Log.i(TAG, "Forward message to native: " + stringified_message);
+        Log.i(TAG, "Forward message to native: " + stringified_message + " " + mTransportName);
         Message message = mHandler.obtainMessage(WRITE_ID, rawMessage);
         mHandler.sendMessage(message);
     }
 
     public void ReadMessageFromNative(WriteMessageCallback callback){
-        Log.i(TAG, "Save callback to read message from native");
+        Log.i(TAG, "Save callback to read message from native " + mTransportName);
         mCallback = callback;
         Message message = mHandler.obtainMessage(READ_ID, mCallback);
         mHandler.sendMessage(message);
@@ -63,7 +68,7 @@ public class JavaToNativeAdapter extends Thread {
 
     public void SendControlMessageToNative(byte[] rawMessage){
         String stringified_message = new String(rawMessage);
-        Log.i(TAG, "Control message to native: " + stringified_message);
+        Log.i(TAG, "Control message to native: " + stringified_message + " " + mTransportName);
         Message message = mHandler.obtainMessage(WRITE_CONTROL_ID, rawMessage);
         mHandler.sendMessage(message);
     }
@@ -87,7 +92,7 @@ public class JavaToNativeAdapter extends Thread {
                         mReader.Connect(new OnConnectCallback() {
                             @Override
                             public void Execute() {
-                                Log.i(TAG, "Reader is connected");
+                                Log.i(TAG, "Reader is connected " + mTransportName);
                                 Message message = mHandler.obtainMessage(CONNECT_WRITER_ID);
                                 mHandler.sendMessage(message);
                             }
@@ -97,7 +102,7 @@ public class JavaToNativeAdapter extends Thread {
                         mWriter.Connect(new OnConnectCallback() {
                             @Override
                             public void Execute() {
-                                Log.i(TAG, "Writer is connected");
+                                Log.i(TAG, "Writer is connected " + mTransportName);
                                 final Intent intent = new Intent(ON_NATIVE_READY);
                                 mContext.sendBroadcast(intent);
                             }
@@ -107,17 +112,17 @@ public class JavaToNativeAdapter extends Thread {
                         mControlWriter.Connect(new OnConnectCallback() {
                             @Override
                             public void Execute() {
-                                Log.i(TAG, "Control writer is connected");
+                                Log.i(TAG, "Control writer is connected " + mTransportName);
                                 final Intent intent = new Intent(ON_NATIVE_CONTROL_READY);
                                 mContext.sendBroadcast(intent);
                             }
                         });
                         break;
                     case DISCONNECT_ID:
-                        Log.i(TAG, "Disconnecting reader");
+                        Log.i(TAG, "Disconnecting reader " + mTransportName);
                         mReader.Disconnect();
 
-                        Log.i(TAG, "Disconnecting writer");
+                        Log.i(TAG, "Disconnecting writer " + mTransportName);
                         mWriter.Disconnect();
                         break;
                 }

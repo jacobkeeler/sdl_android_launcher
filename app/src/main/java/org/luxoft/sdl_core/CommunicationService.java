@@ -74,6 +74,21 @@ public class CommunicationService extends Service {
             return super.onStartCommand(intent, flags, startId);
         }
 
+        private String getTransportName() {
+            switch (mCurrentTransport) {
+                case BLE:
+                    return "[IPC][JAVA][BLE]";
+
+                case CLASSIC_BT:
+                    return "[IPC][JAVA][BT]";
+
+                default:
+                    Log.e(TAG, "[IPC][JAVA][Unknown]");
+                    break;
+            }
+            return "[IPC][JAVA][Unknown]";
+        }
+
         private final BroadcastReceiver communicationServiceReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -89,7 +104,8 @@ public class CommunicationService extends Service {
                         mCurrentTransport = TransportType.BLE;
                         mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
                                 BLE_SENDER_SOCKET_ADDRESS, BLE_RECEIVER_SOCKET_ADDRESS,
-                                BLE_CONTROL_RECEIVER_SOCKET_ADDRESS);
+                                BLE_CONTROL_RECEIVER_SOCKET_ADDRESS,
+                                getTransportName());
                         mNativeAdapterThread.start();
                         break;
 
@@ -98,7 +114,8 @@ public class CommunicationService extends Service {
                         mCurrentTransport = TransportType.CLASSIC_BT;
                         mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
                                 BT_SENDER_SOCKET_ADDRESS, BT_RECEIVER_SOCKET_ADDRESS,
-                                BT_CONTROL_RECEIVER_SOCKET_ADDRESS);
+                                BT_CONTROL_RECEIVER_SOCKET_ADDRESS,
+                                getTransportName());
                         mNativeAdapterThread.start();
                         break;
 
