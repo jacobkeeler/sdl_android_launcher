@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-import static org.luxoft.sdl_core.BluetoothHandler.PREFERRED_MTU;
-
 public class BleLocalSocketReader implements BleReader {
     public static final String TAG = BleLocalSocketReader.class.getSimpleName();
     private LocalServerSocket mServer;
@@ -20,15 +18,11 @@ public class BleLocalSocketReader implements BleReader {
     private BleAdapterMessageCallback mCallback = null;
     private Thread mLoopTread;
 
-    public static final int mBufferSize = 131072; // Copied from SDL INI file
-    public static String SOCKET_ADDRESS = "./localBleReader";
-
-
     @Override
     public void Connect(OnConnectCallback callback){
         Log.i(TAG, "Connect BleLocalSocketReader");
         try {
-            mServer = new LocalServerSocket(SOCKET_ADDRESS);
+            mServer = new LocalServerSocket(AndroidSettings.getStringValue(AndroidSettings.IniParams.ReaderSocketAdress));
         } catch (IOException e) {
             Log.e(TAG, "The localSocketServer creation failed");
             e.printStackTrace();
@@ -94,7 +88,7 @@ public class BleLocalSocketReader implements BleReader {
         public void run() {
             while (true) {
                 byte[] buffer;
-                buffer = new byte[mBufferSize];
+                buffer = new byte[AndroidSettings.getIntValue(AndroidSettings.IniParams.BufferSize)];
                 int mBytesRead;
                 try {
                     mBytesRead = mInputStream.read(buffer);

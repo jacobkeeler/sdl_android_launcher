@@ -19,8 +19,6 @@ public class JavaToNativeBleAdapter extends Thread {
     private static final int CONNECT_READER_ID = 5;
     private static final int CONNECT_WRITER_ID = 6;
     private static final int DISCONNECT_ID = 7;
-    public static final String CONTROL_SOCKET_ADDRESS = "./localBleControl";
-    public static final String WRITER_SOCKET_ADDRESS = "./localBleWriter";
 
     Handler mHandler;
     BleWriter mWriter;
@@ -30,8 +28,10 @@ public class JavaToNativeBleAdapter extends Thread {
     private final Context mContext;
 
     JavaToNativeBleAdapter(Context context){
-        mControlWriter = new BleLocalSocketWriter(CONTROL_SOCKET_ADDRESS);
-        mWriter = new BleLocalSocketWriter(WRITER_SOCKET_ADDRESS);
+        String ctrlSocketName = AndroidSettings.getStringValue(AndroidSettings.IniParams.ControlSocketAdress);
+        String writeSocketName = AndroidSettings.getStringValue(AndroidSettings.IniParams.WriterSocketAdress);
+        mControlWriter = new BleLocalSocketWriter(ctrlSocketName);
+        mWriter = new BleLocalSocketWriter(writeSocketName);
         mReader = new BleLocalSocketReader();
         mContext = context;
     }

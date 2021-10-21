@@ -16,7 +16,6 @@ import java.util.zip.Inflater;
 
 public class CompressionUtil {
     private static final String TAG = CompressionUtil.class.getSimpleName();
-    private static final int const_buffer_size = 131072;
 
     public static byte[] compress(byte[] data) throws IOException {
         Deflater deflater = new Deflater();
@@ -25,7 +24,7 @@ public class CompressionUtil {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length);
 
         deflater.finish();
-        byte[] buffer = new byte[const_buffer_size];
+        byte[] buffer = new byte[AndroidSettings.getIntValue(AndroidSettings.IniParams.BufferSize)];
         while (!deflater.finished()) {
             int count = deflater.deflate(buffer);
             if(count > 0) {
@@ -47,7 +46,7 @@ public class CompressionUtil {
         inflater.setInput(data);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length);
-        byte[] buffer = new byte[const_buffer_size];
+        byte[] buffer = new byte[AndroidSettings.getIntValue(AndroidSettings.IniParams.BufferSize)];
         while (!inflater.finished()) {
             int count = inflater.inflate(buffer);
             if(count > 0) {
