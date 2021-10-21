@@ -25,17 +25,9 @@ public class CommunicationService extends Service {
         public final static String MOBILE_DEVICE_DISCONNECTED_EXTRA = "MOBILE_DEVICE_DISCONNECTED_EXTRA";
         public final static String ON_MOBILE_CONTROL_MESSAGE_RECEIVED = "ON_MOBILE_CONTROL_MESSAGE_RECEIVED";
 
-        public final static String BLE_RECEIVER_SOCKET_ADDRESS = "./localBleReader";
-        public final static String BLE_SENDER_SOCKET_ADDRESS = "./localBleWriter";
-        public final static String BLE_CONTROL_RECEIVER_SOCKET_ADDRESS = "./localBleControl";
-
-        public final static String BT_RECEIVER_SOCKET_ADDRESS = "./localBtReader";
-        public final static String BT_SENDER_SOCKET_ADDRESS = "./localBtWriter";
-        public final static String BT_CONTROL_RECEIVER_SOCKET_ADDRESS = "./localBtControl";
-
         public enum TransportType {
-        BLE,
-        CLASSIC_BT
+            BLE,
+            CLASSIC_BT
         }
 
         BleHandler mBleHandler;
@@ -84,25 +76,33 @@ public class CommunicationService extends Service {
 
                 switch (intent.getAction()) {
 
-                    case ACTION_START_BLE:
+                    case ACTION_START_BLE: {
                         Log.i(TAG, "ACTION_START_BLE received by communicationServiceReceiver");
                         mCurrentTransport = TransportType.BLE;
+                        final String sender_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleSenderSocketAddress);
+                        final String receiver_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleReceiverSocketAddress);
+                        final String control_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleControlSocketAddress);
+
                         mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
-                                BLE_SENDER_SOCKET_ADDRESS, BLE_RECEIVER_SOCKET_ADDRESS,
-                                BLE_CONTROL_RECEIVER_SOCKET_ADDRESS);
+                                sender_socket_address, receiver_socket_address, control_socket_address);
                         mNativeAdapterThread.start();
                         break;
+                    }
 
-                    case ACTION_START_BT:
+                    case ACTION_START_BT: {
                         Log.i(TAG, "ACTION_START_BT received by communicationServiceReceiver");
                         mCurrentTransport = TransportType.CLASSIC_BT;
+                        final String sender_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtSenderSocketAddress);
+                        final String receiver_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtReceiverSocketAddress);
+                        final String control_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtControlSocketAddress);
+
                         mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
-                                BT_SENDER_SOCKET_ADDRESS, BT_RECEIVER_SOCKET_ADDRESS,
-                                BT_CONTROL_RECEIVER_SOCKET_ADDRESS);
+                                sender_socket_address, receiver_socket_address, control_socket_address);
                         mNativeAdapterThread.start();
                         break;
+                    }
 
-                    case ACTION_SCAN:
+                    case ACTION_SCAN: {
                         Log.i(TAG, "ACTION_SCAN received by communicationServiceReceiver");
                         switch (mCurrentTransport) {
                             case BLE:
@@ -118,8 +118,9 @@ public class CommunicationService extends Service {
                         context.sendBroadcast(scan_started_intent);
 
                         break;
+                    }
 
-                    case ACTION_STOP_TRANSPORT:
+                    case ACTION_STOP_TRANSPORT: {
                         Log.i(TAG, "ACTION_STOP received by communicationServiceReceiver");
 
                         switch (mCurrentTransport) {
@@ -133,8 +134,9 @@ public class CommunicationService extends Service {
                         }
 
                         break;
+                    }
 
-                    case ACTION_DISCONNECT_FROM_NATIVE:
+                    case ACTION_DISCONNECT_FROM_NATIVE: {
                         Log.i(TAG, "ACTION_DISCONNECT_FROM_NATIVE received by communicationServiceReceiver");
 
                         try {
@@ -146,8 +148,9 @@ public class CommunicationService extends Service {
                         mNativeAdapterThread = null;
 
                         break;
+                    }
 
-                    case ON_NATIVE_READY:
+                    case ON_NATIVE_READY: {
                         Log.i(TAG, "ON_NATIVE_READY received by communicationServiceReceiver");
 
                         switch (mCurrentTransport) {
@@ -167,8 +170,9 @@ public class CommunicationService extends Service {
                                 break;
                         }
                         break;
+                    }
 
-                    case ON_NATIVE_CONTROL_READY:
+                    case ON_NATIVE_CONTROL_READY: {
                         Log.i(TAG, "ON_NATIVE_CONTROL_READY received by communicationServiceReceiver");
                         switch (mCurrentTransport) {
                             case BLE:
@@ -184,17 +188,18 @@ public class CommunicationService extends Service {
                                 break;
                         }
                         break;
+                    }
 
-
-                    case ON_PERIPHERAL_READY:
+                    case ON_PERIPHERAL_READY: {
                         Log.i(TAG, "ON_PERIPHERAL_READY received by communicationServiceReceiver");
                         if (mNativeAdapterThread != null) {
                             mNativeAdapterThread.EstablishConnectionWithNative();
                         }
 
                         break;
+                    }
 
-                    case ON_MOBILE_MESSAGE_RECEIVED:
+                    case ON_MOBILE_MESSAGE_RECEIVED: {
                         Log.i(TAG, "ON_MOBILE_MESSAGE_RECEIVED received by communicationServiceReceiver");
                         byte[] mobile_message = intent.getByteArrayExtra(MOBILE_DATA_EXTRA);
                         if (mNativeAdapterThread != null) {
@@ -202,8 +207,9 @@ public class CommunicationService extends Service {
                         }
 
                         break;
+                    }
 
-                    case ON_MOBILE_CONTROL_MESSAGE_RECEIVED:
+                    case ON_MOBILE_CONTROL_MESSAGE_RECEIVED: {
                         Log.i(TAG, "ON_MOBILE_CONTROL_MESSAGE_RECEIVED received by communicationServiceReceiver");
                         byte[] mobile_control_message = intent.getByteArrayExtra(MOBILE_CONTROL_DATA_EXTRA);
                         if (mNativeAdapterThread != null) {
@@ -213,6 +219,7 @@ public class CommunicationService extends Service {
                             }
                         }
                         break;
+                    }
 
                     default:
                         Log.e(TAG, "Unexpected value: " + intent.getAction());

@@ -45,21 +45,6 @@ class BleHandler {
 
     public static final String TAG = BleHandler.class.getSimpleName();
 
-    // To request a maximum MTU
-    public static final int PREFERRED_MTU = 512;
-
-    // Service with ability to notify and write
-    private static final UUID SDL_TESTER_SERVICE_UUID = UUID
-            .fromString("00001101-0000-1000-8000-00805f9b34fb");
-
-    // Characteristic for notifications
-    private static final UUID MOBILE_NOTIFICATION_CHARACTERISTIC = UUID
-            .fromString("00001102-0000-1000-8000-00805f9b34fb");
-
-    // Characteristic with permissions to write
-    private static final UUID MOBILE_RESPONSE_CHARACTERISTIC = UUID
-            .fromString("00001104-0000-1000-8000-00805f9b34fb");
-
     private String GenerateDisconnectMessage(BluetoothPeripheral peripheral) {
 
         try {
@@ -103,10 +88,11 @@ class BleHandler {
         @Override
         public void onServicesDiscovered(BluetoothPeripheral peripheral) {
 
-            peripheral.requestMtu(PREFERRED_MTU);
+            peripheral.requestMtu(AndroidSettings.getIntValue(AndroidSettings.IniParams.PreferredMtu));
 
-            // Try to turn on notification
-            peripheral.setNotify(SDL_TESTER_SERVICE_UUID, MOBILE_NOTIFICATION_CHARACTERISTIC, true);
+            final String sdlTesterUUID = AndroidSettings.getStringValue(AndroidSettings.IniParams.SdlTesterServiceUUID);
+            final String mobNotifChar = AndroidSettings.getStringValue(AndroidSettings.IniParams.MobileNotificationCharacteristic);
+            peripheral.setNotify(UUID.fromString(sdlTesterUUID), UUID.fromString(mobNotifChar),true);
 
             final Intent intent = new Intent(ON_PERIPHERAL_READY);
             context.sendBroadcast(intent);
@@ -135,7 +121,8 @@ class BleHandler {
             if (status != GattStatus.SUCCESS) return;
 
             UUID characteristicUUID = characteristic.getUuid();
-            if (characteristicUUID.equals(MOBILE_NOTIFICATION_CHARACTERISTIC)) {
+            final String mobNotifChar = AndroidSettings.getStringValue(AndroidSettings.IniParams.MobileNotificationCharacteristic);
+            if (characteristicUUID.equals(UUID.fromString(mobNotifChar))) {
                 mLongReader.processReadOperation(value);
             }
         }
@@ -217,7 +204,12 @@ class BleHandler {
         mLongWriter.setCallback(new BluetoothLongWriter.LongWriterCallback() {
             @Override
             public void OnLongMessageReady(byte[] message) {
-                BluetoothGattCharacteristic responseCharacteristic = mPeripheral.getCharacteristic(SDL_TESTER_SERVICE_UUID, MOBILE_RESPONSE_CHARACTERISTIC);
+
+                final String sdlTesterUUID = AndroidSettings.getStringValue(AndroidSettings.IniParams.SdlTesterServiceUUID);
+                final String mobRespChar = AndroidSettings.getStringValue(AndroidSettings.IniParams.MobileResponseCharacteristic);
+
+                BluetoothGattCharacteristic responseCharacteristic = mPeripheral.getCharacteristic(UUID.fromString(sdlTesterUUID)
+                        , UUID.fromString(mobRespChar));
                 if (responseCharacteristic != null) {
                     if ((responseCharacteristic.getProperties() & PROPERTY_WRITE) > 0) {
                         mPeripheral.writeCharacteristic(responseCharacteristic, message, WriteType.WITH_RESPONSE);
@@ -250,7 +242,7 @@ class BleHandler {
             public void run() {
                 Log.d(TAG, "Searching for SDL-compatible peripherals...");
                 UUID[] servicesToSearch = new UUID[1];
-                servicesToSearch[0] = SDL_TESTER_SERVICE_UUID;
+                servicesToSearch[0] = UUID.fromString(AndroidSettings.getStringValue(AndroidSettings.IniParams.SdlTesterServiceUUID));
                 central.scanForPeripheralsWithServices(servicesToSearch);
             }
         }, 1000);

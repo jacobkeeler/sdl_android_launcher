@@ -18,8 +18,7 @@ public class LocalSocketReceiver implements IpcReceiver {
     private WriteMessageCallback mCallback = null;
     private Thread mLoopTread;
 
-    public static final int mBufferSize = 131072; // Copied from SDL INI file
-    private String mSocketName;
+    private final String mSocketName;
 
     public LocalSocketReceiver(String socket_name) {
         mSocketName = socket_name;
@@ -95,7 +94,7 @@ public class LocalSocketReceiver implements IpcReceiver {
         public void run() {
             while (true) {
                 byte[] buffer;
-                buffer = new byte[mBufferSize];
+                buffer = new byte[AndroidSettings.getIntValue(AndroidSettings.IniParams.BufferSize)];
                 int mBytesRead;
                 try {
                     mBytesRead = mInputStream.read(buffer);
