@@ -85,7 +85,8 @@ public class CommunicationService extends Service {
             final String control_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleControlSocketAddress);
 
             JavaToNativeAdapter thread = new JavaToNativeAdapter(CommunicationService.this,
-                    sender_socket_address, receiver_socket_address, control_socket_address);
+                    sender_socket_address, receiver_socket_address, control_socket_address,
+                    getTransportName(TransportType.BLE));
             mNativeAdapterThreadMap.put(TransportType.BLE, thread);
             thread.start();
         }
@@ -96,7 +97,8 @@ public class CommunicationService extends Service {
             final String control_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtControlSocketAddress);
 
             JavaToNativeAdapter thread = new JavaToNativeAdapter(CommunicationService.this,
-                    sender_socket_address, receiver_socket_address, control_socket_address);
+                    sender_socket_address, receiver_socket_address, control_socket_address,
+                    getTransportName(TransportType.CLASSIC_BT));
             mNativeAdapterThreadMap.put(TransportType.CLASSIC_BT, thread);
             thread.start();
         }
@@ -106,8 +108,8 @@ public class CommunicationService extends Service {
             return super.onStartCommand(intent, flags, startId);
         }
 
-        private String getTransportName() {
-            switch (mCurrentTransport) {
+        private String getTransportName(TransportType type) {
+            switch (type) {
                 case BLE:
                     return "[IPC][JAVA][BLE]";
 
