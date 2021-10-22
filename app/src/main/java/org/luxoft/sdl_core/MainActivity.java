@@ -70,13 +70,21 @@ public class MainActivity extends AppCompatActivity {
 
         start_sdl_button.setEnabled(true);
         stop_sdl_button.setEnabled(false);
-        start_bt_button.setEnabled(true);
-        start_ble_button.setEnabled(true);
+        start_bt_button.setEnabled(false);
+        start_ble_button.setEnabled(false);
         start_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 start_sdl_button.setEnabled(false);
-                stop_sdl_button.setEnabled(false);
+                stop_sdl_button.setEnabled(true);
+                if(isBluetoothSupported() && isBluetoothPermissionGranted()){
+                    start_bt_button.setEnabled(true);
+                }
+
+                if (isBleSupported() && isBluetoothPermissionGranted()) {
+                    start_ble_button.setEnabled(true);
+                }
+
                 Intent start_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 start_intent.setAction(ACTION_SDL_SERVICE_START);
                 AndroidTool.startService(MainActivity.this, start_intent);
@@ -88,6 +96,10 @@ public class MainActivity extends AppCompatActivity {
         stop_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                start_bt_button.setEnabled(false);
+                start_bt_button.setText("Start BT");
+                start_ble_button.setEnabled(false);
+                start_ble_button.setText("Start BLE");
                 final Intent disconnect_intent = new Intent(ACTION_STOP_TRANSPORT);
                 disconnect_intent.putExtra(SDL_STOPPED_BY_USER_EXTRA, true);
                 sendBroadcast(disconnect_intent);
@@ -100,8 +112,9 @@ public class MainActivity extends AppCompatActivity {
         start_bt_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (!isBleSupported() || !isBluetoothPermissionGranted()) {
-                    start_bt_button.setEnabled(false);
+
+                if(!isBluetoothEnabled()){
+                    return;
                 }
 
                 String buttonText = start_bt_button.getText().toString();
@@ -122,8 +135,9 @@ public class MainActivity extends AppCompatActivity {
         start_ble_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (!isBleSupported() || !isBluetoothPermissionGranted()) {
-                    start_ble_button.setEnabled(false);
+
+                if(!isBluetoothEnabled()){
+                    return;
                 }
 
                 String buttonText = start_ble_button.getText().toString();
@@ -164,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy (){
-        if (isBleSupported() && isBluetoothPermissionGranted()) {
+        if ((isBluetoothSupported() || isBleSupported()) && isBluetoothPermissionGranted()) {
             stopService(new Intent(MainActivity.this, CommunicationService.class));
         }
         super.onDestroy();
@@ -442,10 +456,28 @@ public class MainActivity extends AppCompatActivity {
         return BluetoothAdapter.getDefaultAdapter() != null &&
                 getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
     }
+
+    private boolean isBluetoothSupported(){
+        return BluetoothAdapter.getDefaultAdapter() != null;
+    }
+
+    private boolean isBluetoothEnabled(){
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled()){
+            showToastMessage("Bluetooth is OFF, enable BT on your device");
+            return false;
+        }
+        return true;
+    }
+
     private void initBT() {
-        if(!isBleSupported()){
-            showToastMessage("BLE is NOT supported");
+        if (!isBluetoothSupported()) {
+            showToastMessage("Bluetooth is NOT supported");
             return;
+        }
+
+        if (isBleSupported()){
+            showToastMessage("BLE is NOT supported");
         }
 
         if (!isBluetoothPermissionGranted()) {
