@@ -148,7 +148,10 @@ public class ClassicBtHandler {
     }
 
     public void disconnect() {
-        mState = STATE_NONE;
+        if (mState != STATE_NONE) {
+            context.unregisterReceiver(mReceiver);
+            mState = STATE_NONE;
+        }
 
         if (mBtAdapter.isDiscovering()) {
             Log.i(TAG, "Cancel active discovery");
@@ -157,16 +160,6 @@ public class ClassicBtHandler {
 
         disconnectDevice();
         stopConnectionThreads();
-        context.unregisterReceiver(mReceiver);
-    }
-
-    public void retryConnection() {
-        disconnectDevice();
-        stopConnectionThreads();
-
-        // Restart devices scanning
-        final Intent scan_ble = new Intent(ACTION_SCAN);
-        context.sendBroadcast(scan_ble);
     }
 
     /**
@@ -400,6 +393,11 @@ public class ClassicBtHandler {
             return;
         }
 
+        if (mConnectedThread == null) {
+            Log.e(TAG, "Connected thread is null");
+            return;
+        }
+
         mConnectedThread.write(message);
     }
 
@@ -452,6 +450,7 @@ public class ClassicBtHandler {
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
 //                    retryConnection();
+                    mConnectedDevice = null;
                     connectToNextDevice();
                     break;
                 }
