@@ -8,21 +8,24 @@ import android.content.IntentFilter;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class CommunicationService extends Service {
         public static final String TAG = CommunicationService.class.getSimpleName();
+        public final static String ACTION_CONNECT_ADAPTERS = "ACTION_CONNECT_ADAPTERS";
         public final static String ACTION_START_BLE = "ACTION_START_BLE";
         public final static String ACTION_START_BT ="ACTION_START_BT";
         public final static String ACTION_STOP_TRANSPORT = "ACTION_STOP_TRANSPORT";
-        public final static String ACTION_DISCONNECT_FROM_NATIVE = "ACTION_DISCONNECT_FROM_NATIVE";
         public final static String ACTION_SCAN = "ACTION_SCAN_BLE";
         public final static String ON_PERIPHERAL_READY = "ON_PERIPHERAL_READY";
         public final static String ON_BLE_SCAN_STARTED = "ON_BLE_SCAN_STARTED";
         public final static String ON_NATIVE_READY = "ON_NATIVE_READY";
-        public final static String ON_NATIVE_CONTROL_READY = "ON_NATIVE_CONTROL_READY";
         public final static String ON_MOBILE_MESSAGE_RECEIVED = "ON_MOBILE_MESSAGE_RECEIVED";
         public final static String MOBILE_DATA_EXTRA = "MOBILE_DATA_EXTRA";
         public final static String MOBILE_CONTROL_DATA_EXTRA = "MOBILE_CONTROL_DATA_EXTRA";
         public final static String MOBILE_DEVICE_DISCONNECTED_EXTRA = "MOBILE_DEVICE_DISCONNECTED_EXTRA";
+        public final static String SDL_STOPPED_BY_USER_EXTRA = "SDL_STOPPED_BY_USER_EXTRA";
         public final static String ON_MOBILE_CONTROL_MESSAGE_RECEIVED = "ON_MOBILE_CONTROL_MESSAGE_RECEIVED";
 
         public enum TransportType {
@@ -32,12 +35,13 @@ public class CommunicationService extends Service {
 
         BleHandler mBleHandler;
         ClassicBtHandler mClassicBtHandler;
-        JavaToNativeAdapter mNativeAdapterThread;
+        Map<TransportType, JavaToNativeAdapter> mNativeAdapterThreadMap;
         WriteMessageCallback mCallback;
         TransportType mCurrentTransport;
 
         @Override
         public void onCreate() {
+            mNativeAdapterThreadMap = new HashMap<>();
             registerReceiver(communicationServiceReceiver, makeCommunicationServiceIntentFilter());
             super.onCreate();
         }
@@ -45,6 +49,7 @@ public class CommunicationService extends Service {
         @Override
         public void onDestroy() {
             unregisterReceiver(communicationServiceReceiver);
+            closeJavaAdapterThreads();
             super.onDestroy();
         }
 
@@ -53,12 +58,47 @@ public class CommunicationService extends Service {
             return null;
         }
 
+        private void closeJavaAdapterThreads() {
+            for (Map.Entry<TransportType, JavaToNativeAdapter> entry : mNativeAdapterThreadMap.entrySet()) {
+                try {
+                    entry.getValue().setStopThread();
+                    entry.getValue().join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            mNativeAdapterThreadMap.clear();
+        }
+
         private void initBleHandler(){
             mBleHandler = BleHandler.getInstance(this);
         }
 
         private void initClassicBTHandler(){
             mClassicBtHandler = ClassicBtHandler.getInstance(this);
+        }
+
+        private void initBleJavaToNativeAdapter() {
+            final String sender_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleSenderSocketAddress);
+            final String receiver_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleReceiverSocketAddress);
+            final String control_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleControlSocketAddress);
+
+            JavaToNativeAdapter thread = new JavaToNativeAdapter(CommunicationService.this,
+                    sender_socket_address, receiver_socket_address, control_socket_address);
+            mNativeAdapterThreadMap.put(TransportType.BLE, thread);
+            thread.start();
+        }
+
+        private void initBtJavaToNativeAdapter() {
+            final String sender_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtSenderSocketAddress);
+            final String receiver_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtReceiverSocketAddress);
+            final String control_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtControlSocketAddress);
+
+            JavaToNativeAdapter thread = new JavaToNativeAdapter(CommunicationService.this,
+                    sender_socket_address, receiver_socket_address, control_socket_address);
+            mNativeAdapterThreadMap.put(TransportType.CLASSIC_BT, thread);
+            thread.start();
         }
 
         @Override
@@ -76,29 +116,32 @@ public class CommunicationService extends Service {
 
                 switch (intent.getAction()) {
 
+                    case ACTION_CONNECT_ADAPTERS: {
+                        Log.i(TAG, "ACTION_CONNECT_ADAPTERS received by communicationServiceReceiver");
+                        initBleJavaToNativeAdapter();
+                        initBtJavaToNativeAdapter();
+                        break;
+                    }
+
                     case ACTION_START_BLE: {
                         Log.i(TAG, "ACTION_START_BLE received by communicationServiceReceiver");
                         mCurrentTransport = TransportType.BLE;
-                        final String sender_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleSenderSocketAddress);
-                        final String receiver_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleReceiverSocketAddress);
-                        final String control_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BleControlSocketAddress);
 
-                        mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
-                                sender_socket_address, receiver_socket_address, control_socket_address);
-                        mNativeAdapterThread.start();
+                        initBleHandler();
+                        final Intent scan_ble = new Intent(ACTION_SCAN);
+                        context.sendBroadcast(scan_ble);
+
                         break;
                     }
 
                     case ACTION_START_BT: {
                         Log.i(TAG, "ACTION_START_BT received by communicationServiceReceiver");
                         mCurrentTransport = TransportType.CLASSIC_BT;
-                        final String sender_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtSenderSocketAddress);
-                        final String receiver_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtReceiverSocketAddress);
-                        final String control_socket_address = AndroidSettings.getStringValue(AndroidSettings.IniParams.BtControlSocketAddress);
 
-                        mNativeAdapterThread = new JavaToNativeAdapter(CommunicationService.this,
-                                sender_socket_address, receiver_socket_address, control_socket_address);
-                        mNativeAdapterThread.start();
+                        initClassicBTHandler();
+                        final Intent scan_bt = new Intent(ACTION_SCAN);
+                        context.sendBroadcast(scan_bt);
+
                         break;
                     }
 
@@ -121,31 +164,28 @@ public class CommunicationService extends Service {
                     }
 
                     case ACTION_STOP_TRANSPORT: {
-                        Log.i(TAG, "ACTION_STOP received by communicationServiceReceiver");
+                        Log.i(TAG, "ACTION_STOP_TRANSPORT received by communicationServiceReceiver");
 
-                        switch (mCurrentTransport) {
-                            case BLE:
-                                mBleHandler.disconnect();
-                                break;
+                        if (mCurrentTransport != null) {
+                            switch (mCurrentTransport) {
+                                case BLE:
+                                    if (mBleHandler != null) {
+                                        mBleHandler.disconnect();
+                                    }
+                                    break;
 
-                            case CLASSIC_BT:
-                                mClassicBtHandler.disconnect();
-                                break;
+                                case CLASSIC_BT:
+                                    if (mClassicBtHandler != null) {
+                                        mClassicBtHandler.disconnect();
+                                    }
+                                    break;
+                            }
                         }
 
-                        break;
-                    }
-
-                    case ACTION_DISCONNECT_FROM_NATIVE: {
-                        Log.i(TAG, "ACTION_DISCONNECT_FROM_NATIVE received by communicationServiceReceiver");
-
-                        try {
-                            mNativeAdapterThread.setStopThread();
-                            mNativeAdapterThread.join();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                        if (intent.getBooleanExtra(SDL_STOPPED_BY_USER_EXTRA, false)) {
+                            Log.i(TAG, "Finalizing Java adapters");
+                            closeJavaAdapterThreads();
                         }
-                        mNativeAdapterThread = null;
 
                         break;
                     }
@@ -154,46 +194,34 @@ public class CommunicationService extends Service {
                         Log.i(TAG, "ON_NATIVE_READY received by communicationServiceReceiver");
 
                         switch (mCurrentTransport) {
-                            case BLE:
+                            case BLE: {
                                 mCallback = new BleAdapterWriteMessageCallback();
-                                if (mNativeAdapterThread != null) {
-                                    mNativeAdapterThread.ReadMessageFromNative(mCallback);
+                                JavaToNativeAdapter adapter = mNativeAdapterThreadMap.get(mCurrentTransport);
+                                if (adapter != null) {
+                                    adapter.ReadMessageFromNative(mCallback);
                                 }
                                 break;
+                            }
 
-                            case CLASSIC_BT:
+                            case CLASSIC_BT: {
                                 mCallback = new BtAdapterWriteMessageCallback();
-                                if (mNativeAdapterThread != null) {
-                                    mNativeAdapterThread.ReadMessageFromNative(mCallback);
+                                JavaToNativeAdapter adapter = mNativeAdapterThreadMap.get(mCurrentTransport);
+                                if (adapter != null) {
+                                    adapter.ReadMessageFromNative(mCallback);
                                 }
                                 mClassicBtHandler.start_connected_thread();
                                 break;
-                        }
-                        break;
-                    }
-
-                    case ON_NATIVE_CONTROL_READY: {
-                        Log.i(TAG, "ON_NATIVE_CONTROL_READY received by communicationServiceReceiver");
-                        switch (mCurrentTransport) {
-                            case BLE:
-                                initBleHandler();
-                                final Intent scan_ble = new Intent(ACTION_SCAN);
-                                context.sendBroadcast(scan_ble);
-                                break;
-
-                            case CLASSIC_BT:
-                                initClassicBTHandler();
-                                final Intent scan_bt = new Intent(ACTION_SCAN);
-                                context.sendBroadcast(scan_bt);
-                                break;
+                            }
                         }
                         break;
                     }
 
                     case ON_PERIPHERAL_READY: {
                         Log.i(TAG, "ON_PERIPHERAL_READY received by communicationServiceReceiver");
-                        if (mNativeAdapterThread != null) {
-                            mNativeAdapterThread.EstablishConnectionWithNative();
+
+                        JavaToNativeAdapter adapter = mNativeAdapterThreadMap.get(mCurrentTransport);
+                        if (adapter != null) {
+                            adapter.EstablishConnectionWithNative();
                         }
 
                         break;
@@ -202,8 +230,10 @@ public class CommunicationService extends Service {
                     case ON_MOBILE_MESSAGE_RECEIVED: {
                         Log.i(TAG, "ON_MOBILE_MESSAGE_RECEIVED received by communicationServiceReceiver");
                         byte[] mobile_message = intent.getByteArrayExtra(MOBILE_DATA_EXTRA);
-                        if (mNativeAdapterThread != null) {
-                            mNativeAdapterThread.ForwardMessageToNative(mobile_message);
+
+                        JavaToNativeAdapter adapter = mNativeAdapterThreadMap.get(mCurrentTransport);
+                        if (adapter != null) {
+                            adapter.ForwardMessageToNative(mobile_message);
                         }
 
                         break;
@@ -212,10 +242,12 @@ public class CommunicationService extends Service {
                     case ON_MOBILE_CONTROL_MESSAGE_RECEIVED: {
                         Log.i(TAG, "ON_MOBILE_CONTROL_MESSAGE_RECEIVED received by communicationServiceReceiver");
                         byte[] mobile_control_message = intent.getByteArrayExtra(MOBILE_CONTROL_DATA_EXTRA);
-                        if (mNativeAdapterThread != null) {
-                            mNativeAdapterThread.SendControlMessageToNative(mobile_control_message);
+
+                        JavaToNativeAdapter adapter = mNativeAdapterThreadMap.get(mCurrentTransport);
+                        if (adapter != null) {
+                            adapter.SendControlMessageToNative(mobile_control_message);
                             if (intent.getBooleanExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, false)) {
-                                mNativeAdapterThread.CloseConnectionWithNative();
+                                adapter.CloseConnectionWithNative();
                             }
                         }
                         break;
@@ -229,16 +261,15 @@ public class CommunicationService extends Service {
 
     private static IntentFilter makeCommunicationServiceIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ACTION_CONNECT_ADAPTERS);
         intentFilter.addAction(ACTION_START_BLE);
         intentFilter.addAction(ACTION_START_BT);
         intentFilter.addAction(ACTION_STOP_TRANSPORT);
         intentFilter.addAction(ACTION_SCAN);
         intentFilter.addAction(ON_NATIVE_READY);
-        intentFilter.addAction(ON_NATIVE_CONTROL_READY);
         intentFilter.addAction(ON_PERIPHERAL_READY);
         intentFilter.addAction(ON_MOBILE_MESSAGE_RECEIVED);
         intentFilter.addAction(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
-        intentFilter.addAction(ACTION_DISCONNECT_FROM_NATIVE);
         return intentFilter;
     }
 

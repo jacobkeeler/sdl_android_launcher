@@ -7,7 +7,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
-import static org.luxoft.sdl_core.CommunicationService.ON_NATIVE_CONTROL_READY;
 import static org.luxoft.sdl_core.CommunicationService.ON_NATIVE_READY;
 
 public class JavaToNativeAdapter extends Thread {
@@ -108,8 +107,6 @@ public class JavaToNativeAdapter extends Thread {
                             @Override
                             public void Execute() {
                                 Log.i(TAG, "Control writer is connected");
-                                final Intent intent = new Intent(ON_NATIVE_CONTROL_READY);
-                                mContext.sendBroadcast(intent);
                             }
                         });
                         break;

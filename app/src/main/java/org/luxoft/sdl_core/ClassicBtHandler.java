@@ -1,5 +1,7 @@
 package org.luxoft.sdl_core;
 
+import static android.bluetooth.BluetoothAdapter.ACTION_DISCOVERY_FINISHED;
+
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -15,7 +17,11 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +47,10 @@ public class ClassicBtHandler {
     private BluetoothDevice mConnectedDevice = null;
     private int mState;
 
+    private ArrayList<BluetoothDevice> mDevicesToConnect = null;
+    private ArrayList<BluetoothDevice> mRecentDevices = new ArrayList<>();
+    private Iterator<BluetoothDevice> mCurrentDeviceIterator = null;
+
     // Unique UUID for this application
     private static final UUID SDL_UUID =
             UUID.fromString("936DA01F-9ABD-4D9D-80C7-02AF85C822A8");
@@ -62,40 +72,58 @@ public class ClassicBtHandler {
 
     private ClassicBtHandler(Context context) {
         this.context = context;
-        // Register for broadcasts when a device is discovered.
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        context.registerReceiver(mReceiver, filter);
         mState = STATE_NONE;
     }
 
     public void DoDiscovery() {
-        Log.i(TAG, "If we're already discovering, stop it");
+        Log.i(TAG, "Starting the BT discovery..");
+        // Register for broadcasts when a device is discovered.
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        context.registerReceiver(mReceiver, filter);
+
         if (mBtAdapter.isDiscovering()) {
+            Log.i(TAG, "Cancel active discovery");
             mBtAdapter.cancelDiscovery();
         }
 
-        Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
-        if (pairedDevices.size() > 0) {
-            // There are paired devices. Get the name and address of each paired device.
-            // For now assume that we can have only one paired device
-            for (BluetoothDevice device : pairedDevices) {
-                String deviceName = device.getName();
-                String deviceHardwareAddress = device.getAddress(); // MAC address
-                Log.i(TAG, "Classic BT device " + deviceName + " with address " + deviceHardwareAddress + "is already paired");
-                connect(device);
+        mDevicesToConnect = new ArrayList<>();
+        mDevicesToConnect.addAll(mRecentDevices); // Recently connected devices have higher prio
+        for (BluetoothDevice device : mBtAdapter.getBondedDevices()) {
+            if (!mDevicesToConnect.contains(device)) {
+                mDevicesToConnect.add(device);
             }
+        }
+
+        mCurrentDeviceIterator = mDevicesToConnect.iterator();
+        mState = STATE_LISTEN;
+        connectToNextDevice();
+    }
+
+    private void connectToNextDevice() {
+        if (mState == STATE_NONE) {
+            Log.i(TAG, "State is set to NONE. Do nothing");
+            return;
+        }
+
+        if (mCurrentDeviceIterator.hasNext()) {
+            BluetoothDevice device = mCurrentDeviceIterator.next();
+            String deviceName = device.getName();
+            String deviceHardwareAddress = device.getAddress(); // MAC address
+            Log.i(TAG, "Classic BT device " + deviceName + " with address " + deviceHardwareAddress + "is already paired");
+            connect(device);
             return;
         }
 
         Log.i(TAG, "Request discover from BluetoothAdapter");
+        mDevicesToConnect.clear();
+
         // Request discover from BluetoothAdapter
         mBtAdapter.startDiscovery();
     }
 
-    public void disconnect() {
-        Log.d(TAG, "Disconnected from " + mConnectedDevice.getName());
-
-        if(mConnectedDevice != null) {
+    private void disconnectDevice() {
+        if (mConnectedDevice != null) {
+            Log.d(TAG, "Disconnected from " + mConnectedDevice.getName());
             String ctrl_msg = GenerateDisconnectMessage(mConnectedDevice);
             if(ctrl_msg != null) {
                 final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
@@ -103,11 +131,11 @@ public class ClassicBtHandler {
                 intent.putExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, true);
                 context.sendBroadcast(intent);
             }
+            mConnectedDevice = null;
         }
-        mConnectedDevice = null;
-        context.unregisterReceiver(mReceiver);
-        mState = STATE_NONE;
+    }
 
+    private void stopConnectionThreads() {
         if (mConnectThread != null) {
             mConnectThread.cancel();
             mConnectThread = null;
@@ -119,8 +147,22 @@ public class ClassicBtHandler {
         }
     }
 
+    public void disconnect() {
+        mState = STATE_NONE;
+
+        if (mBtAdapter.isDiscovering()) {
+            Log.i(TAG, "Cancel active discovery");
+            mBtAdapter.cancelDiscovery();
+        }
+
+        disconnectDevice();
+        stopConnectionThreads();
+        context.unregisterReceiver(mReceiver);
+    }
+
     public void retryConnection() {
-        disconnect();
+        disconnectDevice();
+        stopConnectionThreads();
 
         // Restart devices scanning
         final Intent scan_ble = new Intent(ACTION_SCAN);
@@ -166,7 +208,14 @@ public class ClassicBtHandler {
                 String deviceHardwareAddress = device.getAddress();
                 Log.i(TAG, "Classic BT device is found " + deviceName + " with address " + deviceHardwareAddress);
 
-                connect(device);
+                mDevicesToConnect.add(device);
+            }
+
+            // When discovery is finished
+            if (ACTION_DISCOVERY_FINISHED.equals(action)) {
+                Log.i(TAG, "Discovery is finished. Try to connect to device");
+                mCurrentDeviceIterator = mDevicesToConnect.iterator();
+                connectToNextDevice();
             }
         }
     };
@@ -199,7 +248,7 @@ public class ClassicBtHandler {
             Log.i(TAG, "BEGIN mConnectThread");
 
             // Always cancel discovery because it will slow down a connection
-            mBtAdapter.cancelDiscovery();
+//            mBtAdapter.cancelDiscovery();
 
             // Make a connection to the BluetoothSocket
             //TryToConnect();
@@ -215,7 +264,8 @@ public class ClassicBtHandler {
                     Log.e(TAG, "unable to close()" +
                             " socket during connection failure", e2);
                 }
-                retryConnection();
+//                retryConnection();
+                connectToNextDevice();
                 return;
             }
 
@@ -295,6 +345,10 @@ public class ClassicBtHandler {
 
         // Start the thread to manage the connection and perform transmissions
         mConnectedThread = new ConnectedThread(socket);
+
+        if (!mRecentDevices.contains(mConnectedDevice)) {
+            mRecentDevices.add(mConnectedDevice);
+        }
 
         String ctrl_msg = GenerateConnectedMessage(mConnectedDevice);
         if(ctrl_msg != null) {
@@ -397,7 +451,8 @@ public class ClassicBtHandler {
 
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
-                    retryConnection();
+//                    retryConnection();
+                    connectToNextDevice();
                     break;
                 }
             }

@@ -1,10 +1,11 @@
 package org.luxoft.sdl_core;
 
-import static org.luxoft.sdl_core.CommunicationService.ACTION_DISCONNECT_FROM_NATIVE;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_CONNECT_ADAPTERS;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BLE;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BT;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_TRANSPORT;
 import static org.luxoft.sdl_core.CommunicationService.ON_BLE_SCAN_STARTED;
+import static org.luxoft.sdl_core.CommunicationService.SDL_STOPPED_BY_USER_EXTRA;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
 
@@ -79,13 +80,16 @@ public class MainActivity extends AppCompatActivity {
                 Intent start_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 start_intent.setAction(ACTION_SDL_SERVICE_START);
                 AndroidTool.startService(MainActivity.this, start_intent);
+                final Intent connect_intent = new Intent(ACTION_CONNECT_ADAPTERS);
+                sendBroadcast(connect_intent);
             }
         });
 
         stop_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                final Intent disconnect_intent = new Intent(ACTION_DISCONNECT_FROM_NATIVE);
+                final Intent disconnect_intent = new Intent(ACTION_STOP_TRANSPORT);
+                disconnect_intent.putExtra(SDL_STOPPED_BY_USER_EXTRA, true);
                 sendBroadcast(disconnect_intent);
                 Intent stop_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 stop_intent.setAction(ACTION_SDL_SERVICE_STOP);
@@ -153,9 +157,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (savedInstanceState == null) {
             initBT();
-        }
-        if (isBleSupported() && isBluetoothPermissionGranted()) {
-            startService(new Intent(MainActivity.this, CommunicationService.class));
         }
 
         registerReceiver(mainActivityReceiver, makeMainActivityIntentFilter());
@@ -414,6 +415,7 @@ public class MainActivity extends AppCompatActivity {
                 if (grantResults.length > 0) {
                     if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                         Log.i(TAG, "Bluetooth permissions are granted");
+                        startCommunicationService();
                     }
                 }
                 break;
@@ -448,7 +450,15 @@ public class MainActivity extends AppCompatActivity {
 
         if (!isBluetoothPermissionGranted()) {
             askForBluetoothPermissions();
+            return;
         }
+
+        startCommunicationService();
+    }
+
+    private void startCommunicationService() {
+        Log.d(TAG, "Starting communication service...");
+        startService(new Intent(MainActivity.this, CommunicationService.class));
     }
 
     private void showToastMessage(String message) {
