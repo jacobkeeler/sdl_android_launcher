@@ -19,7 +19,7 @@ public class CommunicationService extends Service {
         public final static String ACTION_STOP_TRANSPORT = "ACTION_STOP_TRANSPORT";
         public final static String ACTION_SCAN = "ACTION_SCAN_BLE";
         public final static String ON_PERIPHERAL_READY = "ON_PERIPHERAL_READY";
-        public final static String ON_BLE_SCAN_STARTED = "ON_BLE_SCAN_STARTED";
+        public final static String ON_DEVICE_SCAN_STARTED = "ON_DEVICE_SCAN_STARTED";
         public final static String ON_NATIVE_READY = "ON_NATIVE_READY";
         public final static String ON_MOBILE_MESSAGE_RECEIVED = "ON_MOBILE_MESSAGE_RECEIVED";
         public final static String MOBILE_DATA_EXTRA = "MOBILE_DATA_EXTRA";
@@ -174,7 +174,7 @@ public class CommunicationService extends Service {
                                 break;
                         }
 
-                        final Intent scan_started_intent = new Intent(ON_BLE_SCAN_STARTED);
+                        final Intent scan_started_intent = new Intent(ON_DEVICE_SCAN_STARTED);
                         context.sendBroadcast(scan_started_intent);
 
                         break;

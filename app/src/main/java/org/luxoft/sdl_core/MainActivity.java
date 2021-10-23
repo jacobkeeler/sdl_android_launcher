@@ -4,7 +4,7 @@ import static org.luxoft.sdl_core.CommunicationService.ACTION_CONNECT_ADAPTERS;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BLE;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BT;
 import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_TRANSPORT;
-import static org.luxoft.sdl_core.CommunicationService.ON_BLE_SCAN_STARTED;
+import static org.luxoft.sdl_core.CommunicationService.ON_DEVICE_SCAN_STARTED;
 import static org.luxoft.sdl_core.CommunicationService.SDL_STOPPED_BY_USER_EXTRA;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
@@ -522,7 +522,7 @@ public class MainActivity extends AppCompatActivity {
                     showToastMessage("SDL service has been started");
                     break;
 
-                case ON_BLE_SCAN_STARTED:
+                case ON_DEVICE_SCAN_STARTED:
                     showToastMessage("Scanning for devices nearby...");
                     break;
             }
@@ -533,7 +533,7 @@ public class MainActivity extends AppCompatActivity {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ON_SDL_SERVICE_STOPPED);
         intentFilter.addAction(ON_SDL_SERVICE_STARTED);
-        intentFilter.addAction(ON_BLE_SCAN_STARTED);
+        intentFilter.addAction(ON_DEVICE_SCAN_STARTED);
         return intentFilter;
     }
 
