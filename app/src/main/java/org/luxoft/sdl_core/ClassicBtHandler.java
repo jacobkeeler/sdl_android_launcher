@@ -94,8 +94,8 @@ public class ClassicBtHandler {
             }
         }
 
-        mCurrentDeviceIterator = mDevicesToConnect.iterator();
         mState = STATE_LISTEN;
+        mCurrentDeviceIterator = mDevicesToConnect.iterator();
         connectToNextDevice();
     }
 
@@ -105,7 +105,11 @@ public class ClassicBtHandler {
             return;
         }
 
-        if (mCurrentDeviceIterator.hasNext()) {
+        if (!mDevicesToConnect.isEmpty()) {
+            if (!mCurrentDeviceIterator.hasNext()) {
+                mCurrentDeviceIterator = mDevicesToConnect.iterator();
+            }
+
             BluetoothDevice device = mCurrentDeviceIterator.next();
             String deviceName = device.getName();
             String deviceHardwareAddress = device.getAddress(); // MAC address
@@ -114,10 +118,7 @@ public class ClassicBtHandler {
             return;
         }
 
-        Log.i(TAG, "Request discover from BluetoothAdapter");
-        mDevicesToConnect.clear();
-
-        // Request discover from BluetoothAdapter
+        Log.i(TAG, "No paired devices found. Starting device discovery from BluetoothAdapter");
         mBtAdapter.startDiscovery();
     }
 
