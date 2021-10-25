@@ -240,11 +240,7 @@ public class ClassicBtHandler {
         public void run() {
             Log.i(TAG, "BEGIN mConnectThread");
 
-            // Always cancel discovery because it will slow down a connection
-//            mBtAdapter.cancelDiscovery();
-
             // Make a connection to the BluetoothSocket
-            //TryToConnect();
             try {
                 // This is a blocking call and will only return on a
                 // successful connection or an exception
@@ -257,7 +253,6 @@ public class ClassicBtHandler {
                     Log.e(TAG, "unable to close()" +
                             " socket during connection failure", e2);
                 }
-//                retryConnection();
                 connectToNextDevice();
                 return;
             }
@@ -270,40 +265,6 @@ public class ClassicBtHandler {
             Log.d(TAG, "Start the connected thread!!!");
             // Start the connected thread
             connected(mmSocket);
-        }
-
-        void TryToConnect() {
-            final int connect_attempts = 5;
-            final int attempt_interval_ms = 2000;
-
-            for (int i = 0; i < connect_attempts; ++i) {
-                Log.d(TAG,"Attempt #" + (i + 1) + " to connect to socket...");
-
-                try {
-                    mmSocket.connect();
-                } catch (IOException e) {
-                    /*try {
-                        mmSocket.close();
-                    } catch (IOException e2) {
-                        Log.e(TAG, "unable to close()" +
-                                " socket during connection failure", e2);*/
-                    }
-
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(attempt_interval_ms);
-                    } catch (InterruptedException interruptedException) {
-                        break;
-                    }
-
-                    continue;
-                }
-
-                //Log.d(TAG, "Successfully connected to socket");
-                //return true;
-            //}
-
-            /*Log.e(TAG, "Connection attempts exceeded. Can't connect to socket");
-            return false;*/
         }
 
         public void cancel() {
@@ -449,8 +410,7 @@ public class ClassicBtHandler {
 
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
-//                    retryConnection();
-                    mConnectedDevice = null;
+                    disconnectDevice();
                     connectToNextDevice();
                     break;
                 }

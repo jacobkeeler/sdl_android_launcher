@@ -476,7 +476,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        if (isBleSupported()){
+        if (!isBleSupported()){
             showToastMessage("BLE is NOT supported");
         }
 
