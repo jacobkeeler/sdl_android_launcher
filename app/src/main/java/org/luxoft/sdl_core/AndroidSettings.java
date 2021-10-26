@@ -1,7 +1,5 @@
 package org.luxoft.sdl_core;
 
-import android.util.Log;
-
 import java.util.HashMap;
 
 public class AndroidSettings {
@@ -13,13 +11,16 @@ public class AndroidSettings {
 
     public enum IniParams {
         BufferSize,
-        ReaderSocketAdress,
-        ControlSocketAdress,
-        WriterSocketAdress,
-        PrefferredMtu,
+        BleReceiverSocketAddress,
+        BleControlSocketAddress,
+        BleSenderSocketAddress,
+        BtReceiverSocketAddress,
+        BtControlSocketAddress,
+        BtSenderSocketAddress,
+        PreferredMtu,
         SdlTesterServiceUUID,
         MobileNotificationCharacteristic,
-        MobileResponceCharacteristic
+        MobileResponseCharacteristic
     }
 
     private static String getStrValue(IniLoader iniFile, String section, String Key, String defaultValue) {
@@ -36,13 +37,16 @@ public class AndroidSettings {
 
         HashMap<String, String> defaulValues  = new HashMap<String, String>() {{
             put(IniParams.BufferSize.toString(),                       "131072");
-            put(IniParams.ReaderSocketAdress.toString(),               "./localBleReader");
-            put(IniParams.ControlSocketAdress.toString(),              "./localBleControl");
-            put(IniParams.WriterSocketAdress.toString(),               "./localBleWriter");
-            put(IniParams.PrefferredMtu.toString(),                    "512");
+            put(IniParams.BleReceiverSocketAddress.toString(),         "./localBleReader");
+            put(IniParams.BleControlSocketAddress.toString(),          "./localBleControl");
+            put(IniParams.BleSenderSocketAddress.toString(),           "./localBleWriter");
+            put(IniParams.BtReceiverSocketAddress.toString(),          "./localBtReader");
+            put(IniParams.BtControlSocketAddress.toString(),           "./localBtControl");
+            put(IniParams.BtSenderSocketAddress.toString(),            "./localBtWriter");
+            put(IniParams.PreferredMtu.toString(),                     "512");
             put(IniParams.SdlTesterServiceUUID.toString(),             "00001101-0000-1000-8000-00805f9b34fb");
             put(IniParams.MobileNotificationCharacteristic.toString(), "00001102-0000-1000-8000-00805f9b34fb");
-            put(IniParams.MobileResponceCharacteristic.toString(),     "00001104-0000-1000-8000-00805f9b34fb");
+            put(IniParams.MobileResponseCharacteristic.toString(),     "00001104-0000-1000-8000-00805f9b34fb");
         }};
 
         mValues = new HashMap<>();

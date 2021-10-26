@@ -21,29 +21,29 @@ import org.json.JSONObject;
 import java.util.UUID;
 
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
-import static org.luxoft.sdl_core.BleCentralService.MOBILE_DATA_EXTRA;
-import static org.luxoft.sdl_core.BleCentralService.MOBILE_DEVICE_DISCONNECTED_EXTRA;
-import static org.luxoft.sdl_core.BleCentralService.ON_MOBILE_MESSAGE_RECEIVED;
-import static org.luxoft.sdl_core.BleCentralService.ON_BLE_PERIPHERAL_READY;
-import static org.luxoft.sdl_core.BleCentralService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
-import static org.luxoft.sdl_core.BleCentralService.MOBILE_CONTROL_DATA_EXTRA;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_SCAN;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_DATA_EXTRA;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_DEVICE_DISCONNECTED_EXTRA;
+import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_MESSAGE_RECEIVED;
+import static org.luxoft.sdl_core.CommunicationService.ON_PERIPHERAL_READY;
+import static org.luxoft.sdl_core.CommunicationService.ON_MOBILE_CONTROL_MESSAGE_RECEIVED;
+import static org.luxoft.sdl_core.CommunicationService.MOBILE_CONTROL_DATA_EXTRA;
 
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ACTION;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_NAME;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAM_ADDRESS;
-import static org.luxoft.sdl_core.BluetoothBleContract.PARAMS;
+import static org.luxoft.sdl_core.TransportContract.PARAM_ACTION;
+import static org.luxoft.sdl_core.TransportContract.PARAM_NAME;
+import static org.luxoft.sdl_core.TransportContract.PARAM_ADDRESS;
+import static org.luxoft.sdl_core.TransportContract.PARAMS;
 
-class BluetoothHandler {
+class BleHandler {
     public BluetoothCentralManager central;
-    private static BluetoothHandler instance = null;
+    private static BleHandler instance = null;
     private BluetoothPeripheral mPeripheral = null;
     private final Context context;
     private final Handler handler = new Handler();
     private final BluetoothLongReader mLongReader = new BluetoothLongReader();
     private final BluetoothLongWriter mLongWriter = new BluetoothLongWriter();
 
-    public static final String TAG = BluetoothHandler.class.getSimpleName();
+    public static final String TAG = BleHandler.class.getSimpleName();
 
     private String GenerateDisconnectMessage(BluetoothPeripheral peripheral) {
 
@@ -77,9 +77,9 @@ class BluetoothHandler {
         return null;
     }
 
-    public static synchronized BluetoothHandler getInstance(Context context) {
+    public static synchronized BleHandler getInstance(Context context) {
         if (instance == null) {
-            instance = new BluetoothHandler(context);
+            instance = new BleHandler(context);
         }
         return instance;
     }
@@ -88,13 +88,13 @@ class BluetoothHandler {
         @Override
         public void onServicesDiscovered(BluetoothPeripheral peripheral) {
 
-            peripheral.requestMtu(AndroidSettings.getIntValue(AndroidSettings.IniParams.PrefferredMtu));
+            peripheral.requestMtu(AndroidSettings.getIntValue(AndroidSettings.IniParams.PreferredMtu));
 
             final String sdlTesterUUID = AndroidSettings.getStringValue(AndroidSettings.IniParams.SdlTesterServiceUUID);
             final String mobNotifChar = AndroidSettings.getStringValue(AndroidSettings.IniParams.MobileNotificationCharacteristic);
             peripheral.setNotify(UUID.fromString(sdlTesterUUID), UUID.fromString(mobNotifChar),true);
 
-            final Intent intent = new Intent(ON_BLE_PERIPHERAL_READY);
+            final Intent intent = new Intent(ON_PERIPHERAL_READY);
             context.sendBroadcast(intent);
         }
 
@@ -153,21 +153,19 @@ class BluetoothHandler {
         public void onDisconnectedPeripheral(final BluetoothPeripheral peripheral, final HciStatus status) {
             Log.d(TAG, "Disconnected from " + peripheral.getName());
 
+            String ctrl_msg = GenerateDisconnectMessage(peripheral);
+            if(ctrl_msg != null) {
+                final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
+                intent.putExtra(MOBILE_CONTROL_DATA_EXTRA, ctrl_msg.getBytes());
+                intent.putExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, true);
+                context.sendBroadcast(intent);
+            }
+            mLongReader.resetBuffer();
+            mLongWriter.resetBuffer();
+
             if (mPeripheral != null && peripheral.getAddress().equals(mPeripheral.getAddress())) {
-
-                String ctrl_msg = GenerateDisconnectMessage(peripheral);
-                if(ctrl_msg != null) {
-                    final Intent intent = new Intent(ON_MOBILE_CONTROL_MESSAGE_RECEIVED);
-                    intent.putExtra(MOBILE_CONTROL_DATA_EXTRA, ctrl_msg.getBytes());
-                    intent.putExtra(MOBILE_DEVICE_DISCONNECTED_EXTRA, true);
-                    context.sendBroadcast(intent);
-                }
-
-                mLongReader.resetBuffer();
-                mLongWriter.resetBuffer();
-
                 // Restart devices scanning
-                final Intent scan_ble = new Intent(ACTION_SCAN_BLE);
+                final Intent scan_ble = new Intent(ACTION_SCAN);
                 context.sendBroadcast(scan_ble);
             }
         }
@@ -191,7 +189,7 @@ class BluetoothHandler {
         mLongWriter.processWriteOperation(message);
     }
 
-    private BluetoothHandler(Context context) {
+    private BleHandler(Context context) {
         this.context = context;
 
         mLongReader.setCallback(new BluetoothLongReader.LongReaderCallback() {
@@ -199,7 +197,7 @@ class BluetoothHandler {
             public void OnLongMessageReceived(byte[] message) {
                 final Intent intent = new Intent(ON_MOBILE_MESSAGE_RECEIVED);
                 intent.putExtra(MOBILE_DATA_EXTRA, message);
-                BluetoothHandler.this.context.sendBroadcast(intent);
+                BleHandler.this.context.sendBroadcast(intent);
             }
         });
 
@@ -208,7 +206,7 @@ class BluetoothHandler {
             public void OnLongMessageReady(byte[] message) {
 
                 final String sdlTesterUUID = AndroidSettings.getStringValue(AndroidSettings.IniParams.SdlTesterServiceUUID);
-                final String mobRespChar = AndroidSettings.getStringValue(AndroidSettings.IniParams.MobileResponceCharacteristic);
+                final String mobRespChar = AndroidSettings.getStringValue(AndroidSettings.IniParams.MobileResponseCharacteristic);
 
                 BluetoothGattCharacteristic responseCharacteristic = mPeripheral.getCharacteristic(UUID.fromString(sdlTesterUUID)
                         , UUID.fromString(mobRespChar));
@@ -222,7 +220,7 @@ class BluetoothHandler {
     }
 
     public void disconnect() {
-        Log.d(TAG, "Closing bluetooth handler...");
+        Log.d(TAG, "Closing BLE handler...");
         handler.removeCallbacksAndMessages(null);
         if (central != null) {
             if (mPeripheral != null) {

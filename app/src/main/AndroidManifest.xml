@@ -37,7 +37,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".BleCentralService" />
+        <service android:name=".CommunicationService" />
     </application>
 
 </manifest>

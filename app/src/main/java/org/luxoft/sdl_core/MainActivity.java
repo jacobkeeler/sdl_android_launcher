@@ -1,9 +1,11 @@
 package org.luxoft.sdl_core;
 
-import static org.luxoft.sdl_core.BleCentralService.ACTION_SCAN_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ON_BLE_SCAN_STARTED;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_CONNECT_ADAPTERS;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BLE;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_START_BT;
+import static org.luxoft.sdl_core.CommunicationService.ACTION_STOP_TRANSPORT;
+import static org.luxoft.sdl_core.CommunicationService.ON_DEVICE_SCAN_STARTED;
+import static org.luxoft.sdl_core.CommunicationService.SDL_STOPPED_BY_USER_EXTRA;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
 
@@ -38,15 +40,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import android.bluetooth.BluetoothAdapter;
-
-import static org.luxoft.sdl_core.BleCentralService.ACTION_START_BLE;
-import static org.luxoft.sdl_core.BleCentralService.ACTION_STOP_BLE;
-
 import static org.luxoft.sdl_core.SdlLauncherService.ACTION_SDL_SERVICE_START;
 import static org.luxoft.sdl_core.SdlLauncherService.ACTION_SDL_SERVICE_STOP;
-import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STOPPED;
-import static org.luxoft.sdl_core.SdlLauncherService.ON_SDL_SERVICE_STARTED;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -54,6 +49,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Button start_sdl_button;
     private Button stop_sdl_button;
+    private Button start_bt_button;
+    private Button start_ble_button;
     public static String sdl_cache_folder_path;
     public static String sdl_external_dir_folder_path;
     private static final int ACCESS_LOCATION_REQUEST = 1;
@@ -68,37 +65,93 @@ public class MainActivity extends AppCompatActivity {
 
         start_sdl_button = findViewById(R.id.start_sdl_button);
         stop_sdl_button = findViewById(R.id.stop_sdl_button);
+        start_bt_button = findViewById(R.id.start_bt_button);
+        start_ble_button = findViewById(R.id.start_ble_button);
 
         start_sdl_button.setEnabled(true);
         stop_sdl_button.setEnabled(false);
-
+        start_bt_button.setEnabled(false);
+        start_ble_button.setEnabled(false);
         start_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 start_sdl_button.setEnabled(false);
-                stop_sdl_button.setEnabled(false);
+                stop_sdl_button.setEnabled(true);
+                if(isBluetoothSupported() && isBluetoothPermissionGranted()){
+                    start_bt_button.setEnabled(true);
+                }
+
+                if (isBleSupported() && isBluetoothPermissionGranted()) {
+                    start_ble_button.setEnabled(true);
+                }
+
                 Intent start_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 start_intent.setAction(ACTION_SDL_SERVICE_START);
                 AndroidTool.startService(MainActivity.this, start_intent);
-
-                if (isBleSupported() && isBluetoothPermissionGranted()) {
-                    final Intent intent = new Intent(ACTION_START_BLE);
-                    sendBroadcast(intent);
-                }
+                final Intent connect_intent = new Intent(ACTION_CONNECT_ADAPTERS);
+                sendBroadcast(connect_intent);
             }
         });
 
         stop_sdl_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (isBleSupported() && isBluetoothPermissionGranted()) {
-                    final Intent intent = new Intent(ACTION_STOP_BLE);
-                    sendBroadcast(intent);
-                }
-              
+                start_bt_button.setEnabled(false);
+                start_bt_button.setText("Start BT");
+                start_ble_button.setEnabled(false);
+                start_ble_button.setText("Start BLE");
+                final Intent disconnect_intent = new Intent(ACTION_STOP_TRANSPORT);
+                disconnect_intent.putExtra(SDL_STOPPED_BY_USER_EXTRA, true);
+                sendBroadcast(disconnect_intent);
                 Intent stop_intent = new Intent(MainActivity.this, SdlLauncherService.class);
                 stop_intent.setAction(ACTION_SDL_SERVICE_STOP);
                 AndroidTool.startService(MainActivity.this, stop_intent);
+            }
+        });
+
+        start_bt_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                if(!isBluetoothEnabled()){
+                    return;
+                }
+
+                String buttonText = start_bt_button.getText().toString();
+                if(buttonText.equals("Start BT")) {
+                    start_ble_button.setEnabled(false);
+                    start_bt_button.setText("Stop BT");
+                    final Intent intent = new Intent(ACTION_START_BT);
+                    sendBroadcast(intent);
+                }else if(buttonText.equals("Stop BT")){
+                    start_ble_button.setEnabled(true);
+                    start_bt_button.setText("Start BT");
+                    final Intent intent = new Intent(ACTION_STOP_TRANSPORT);
+                    sendBroadcast(intent);
+                }
+            }
+        });
+
+        start_ble_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                if(!isBluetoothEnabled()){
+                    return;
+                }
+
+                String buttonText = start_ble_button.getText().toString();
+                if(buttonText.equals("Start BLE")) {
+                    start_bt_button.setEnabled(false);
+                    start_ble_button.setText("Stop BLE");
+                    final Intent intent = new Intent(ACTION_START_BLE);
+                    sendBroadcast(intent);
+                }else if(buttonText.equals("Stop BLE")){
+                    start_bt_button.setEnabled(true);
+                    start_ble_button.setText("Start BLE");
+                    final Intent intent = new Intent(ACTION_STOP_TRANSPORT);
+                    sendBroadcast(intent);
+                }
             }
         });
 
@@ -119,17 +172,14 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             initBT();
         }
-        if (isBleSupported() && isBluetoothPermissionGranted()) {
-            startService(new Intent(MainActivity.this, BleCentralService.class));
-        }
 
         registerReceiver(mainActivityReceiver, makeMainActivityIntentFilter());
     }
 
     @Override
     protected void onDestroy (){
-        if (isBleSupported() && isBluetoothPermissionGranted()) {
-            stopService(new Intent(MainActivity.this, BleCentralService.class));
+        if ((isBluetoothSupported() || isBleSupported()) && isBluetoothPermissionGranted()) {
+            stopService(new Intent(MainActivity.this, CommunicationService.class));
         }
         super.onDestroy();
         unregisterReceiver(mainActivityReceiver);
@@ -379,6 +429,7 @@ public class MainActivity extends AppCompatActivity {
                 if (grantResults.length > 0) {
                     if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                         Log.i(TAG, "Bluetooth permissions are granted");
+                        startCommunicationService();
                     }
                 }
                 break;
@@ -405,15 +456,41 @@ public class MainActivity extends AppCompatActivity {
         return BluetoothAdapter.getDefaultAdapter() != null &&
                 getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
     }
+
+    private boolean isBluetoothSupported(){
+        return BluetoothAdapter.getDefaultAdapter() != null;
+    }
+
+    private boolean isBluetoothEnabled(){
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (bluetoothAdapter != null && !bluetoothAdapter.isEnabled()){
+            showToastMessage("Bluetooth is OFF, enable BT on your device");
+            return false;
+        }
+        return true;
+    }
+
     private void initBT() {
-        if(!isBleSupported()){
-            showToastMessage("BLE is NOT supported");
+        if (!isBluetoothSupported()) {
+            showToastMessage("Bluetooth is NOT supported");
             return;
+        }
+
+        if (!isBleSupported()){
+            showToastMessage("BLE is NOT supported");
         }
 
         if (!isBluetoothPermissionGranted()) {
             askForBluetoothPermissions();
+            return;
         }
+
+        startCommunicationService();
+    }
+
+    private void startCommunicationService() {
+        Log.d(TAG, "Starting communication service...");
+        startService(new Intent(MainActivity.this, CommunicationService.class));
     }
 
     private void showToastMessage(String message) {
@@ -443,13 +520,10 @@ public class MainActivity extends AppCompatActivity {
                     start_sdl_button.setEnabled(false);
                     stop_sdl_button.setEnabled(true);
                     showToastMessage("SDL service has been started");
-
-                    final Intent scan_intent = new Intent(ACTION_SCAN_BLE);
-                    sendBroadcast(scan_intent);
                     break;
 
-                case ON_BLE_SCAN_STARTED:
-                    showToastMessage("Scanning for a BLE devices nearby...");
+                case ON_DEVICE_SCAN_STARTED:
+                    showToastMessage("Scanning for devices nearby...");
                     break;
             }
         }
@@ -459,7 +533,7 @@ public class MainActivity extends AppCompatActivity {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ON_SDL_SERVICE_STOPPED);
         intentFilter.addAction(ON_SDL_SERVICE_STARTED);
-        intentFilter.addAction(ON_BLE_SCAN_STARTED);
+        intentFilter.addAction(ON_DEVICE_SCAN_STARTED);
         return intentFilter;
     }
 
