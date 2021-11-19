@@ -313,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
         // Create a temporary file to see whether a volume is really writeable.
         // It's important not to put it in the root directory which may have a
         // limit on the number of files.
-        String directoryName = Environment.getExternalStorageDirectory().toString().concat("/SDL");
+        String directoryName = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).toString().concat("/SDL");
 
         File directory = new File(directoryName);
         if (!directory.isDirectory()) {
@@ -331,7 +331,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getDefaultExternalDirectory() {
-        return getDir("SDL", 0).getPath();
+        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).toString().concat("/SDL");
     }
 
     private String getExternalDirectory() {
